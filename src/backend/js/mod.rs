@@ -26,7 +26,7 @@ fn pattern_assign(pattern: SapAST, value: String) -> String {
     } = &pattern
     {
         // sap_ast is a pattern
-        let ids = find_all_ids_in_pattern(&p);
+        let ids = find_all_ids_in_pattern(p);
 
         if let Pattern::Literal(literal) = p {
             let literal = compile_literal(literal.clone());
@@ -35,12 +35,14 @@ fn pattern_assign(pattern: SapAST, value: String) -> String {
             )
         } else {
             let pattern = compile_inner(pattern.clone());
-            format!("let {pattern} = {value};")
+            "{".to_string()
+                + &format!("let {pattern} = {value};")
                 + &ids
                     .into_iter()
                     .map(|id| format!("__new_binding__(__ENV__, '{id}', {id})"))
                     .collect::<Vec<String>>()
                     .join(";")
+                + "}"
         }
     } else if let SapAST {
         span,
@@ -52,6 +54,45 @@ fn pattern_assign(pattern: SapAST, value: String) -> String {
             body: SapASTBody::Pattern(Pattern::Id(i.clone())),
         };
         pattern_assign(pattern_ast, value)
+    } else {
+        unreachable!("Expected pattern, got {:?}", pattern)
+    }
+}
+
+fn pattern_assign_get_cont(pattern: SapAST, cid: String, value: String) -> String {
+    if let pattern @ SapAST {
+        span: _,
+        body: SapASTBody::Pattern(p),
+    } = &pattern
+    {
+        // sap_ast is a pattern
+        let ids = find_all_ids_in_pattern(p);
+        if let Pattern::Literal(literal) = p {
+            let literal = compile_literal(literal.clone());
+            format!(
+                "{literal} === {value} ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+            )
+        } else {
+            let pattern = compile_inner(pattern.clone());
+            "{".to_string()
+                + &format!("let {pattern} = {value};")
+                + &ids
+                    .into_iter()
+                    .map(|id| format!("__new_binding_cont__(__ENV__, '{id}', '{cid}', {id})"))
+                    .collect::<Vec<String>>()
+                    .join(";")
+                + "}"
+        }
+    } else if let SapAST {
+        span,
+        body: SapASTBody::Id(i),
+    } = pattern
+    {
+        let pattern_ast = SapAST {
+            span,
+            body: SapASTBody::Pattern(Pattern::Id(i.clone())),
+        };
+        pattern_assign_get_cont(pattern_ast, cid, value)
     } else {
         unreachable!("Expected pattern, got {:?}", pattern)
     }
@@ -136,7 +177,6 @@ pub fn compile(ast: SapAST) -> String {
     APPEND_FILE.to_string() + &compile_inner(ast)
 }
 
-// __call__ will set the CONT variable in the environment
 fn compile_inner(ast: SapAST) -> String {
     match ast.body {
         crate::ast::SapASTBody::Id(id) => format!("__ENV__['{}']", id.0),
@@ -178,8 +218,6 @@ fn compile_inner(ast: SapAST) -> String {
                 String::new()
             };
 
-            let guard = guard.map(|x| compile_inner(*x)).unwrap_or("true".into());
-
             let body = if let SapASTBody::Block(body) = body.body {
                 compile_block(body)
             } else {
@@ -187,25 +225,23 @@ fn compile_inner(ast: SapAST) -> String {
                 format!("return {body};")
             };
 
+            let body = if let Some(guard) = guard {
+                format!(
+                    "if (__extract_return__({guard})) {{ {implicit_params}; {body} }} else {{ throw new Error('guard failed'); }}",
+                    guard = compile_inner(*guard),
+                )
+            } else {
+                format!("{implicit_params}; {body}")
+            };
+
             format!(
                 "
-                (
-                    function*(__PENV__, {args}) {{
-                        const __ENV__ = {{' CONT ':undefined}}; __ENV__.__proto__ = __PENV__;
-
-                        if ({pattern}) {{
-                            if ({guard}) {{
-                                {implicit_params};
-                                {body};
-                            }} else {{
-                                throw new Error('guard failed');
-                            }}
-                        }} else {{
-                            throw new Error('pattern matching failed');
-                        }}
-                    }}
-                )
-            "
+(function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __PENV__;
+        if (__extract_return__({pattern})) {{
+        {body}
+        }} else {{throw new Error('pattern matching failed');}}
+}})
+"
             )
         }
         crate::ast::SapASTBody::Pattern(pattern) => match pattern {
@@ -246,36 +282,32 @@ fn compile_inner(ast: SapAST) -> String {
             let block = compile_block(vec);
 
             format!(
-                "((()=>{{const _env = this.__ENV__; const __ENV__ = {{' CONT ':undefined}}; __ENV__.__proto__ = _env; {block}}})())"
+                "((()=>{{const _env = this.__ENV__; const __ENV__ = {{ }}; __ENV__.__proto__ = _env; {block}}})())"
             )
         }
         crate::ast::SapASTBody::Literal(literal) => compile_literal(literal),
         crate::ast::SapASTBody::Typeof(sap_ast) => format!("(typeof {})", compile_inner(*sap_ast)),
         crate::ast::SapASTBody::Yield(sap_ast) => format!("(yield {})", compile_inner(*sap_ast)),
+        crate::ast::SapASTBody::YieldChild(sap_ast) => format!(
+            "(__is_return__({0}) && {0}.next !== undefined ? (yield* ({0}.next)) : (yield* {0}))",
+            compile_inner(*sap_ast)
+        ),
 
         crate::ast::SapASTBody::Assign(pattern, sap_ast1) => {
-            let value = compile_inner(*sap_ast1);
-            pattern_assign(*pattern, value)
+            pattern_assign(*pattern, compile_inner(*sap_ast1))
         }
         crate::ast::SapASTBody::AssignGetCont(sap_ast, sap_ast1, sap_ast2) => {
-            let b = compile_inner(*sap_ast1);
-
-            let value = compile_inner(*sap_ast2);
-            let ac = pattern_assign(*sap_ast, value);
-            format!(
-                "
-                ((()=>{{
-                {ac};
-                __new_binding__(__ENV__, ' CONT ', {b});
-                }})())
-                "
-            )
+            if let SapASTBody::Id(id) = sap_ast1.body {
+                pattern_assign_get_cont(*sap_ast, id.0, compile_inner(*sap_ast2))
+            } else {
+                unimplemented!("Expected id, got {:?}", sap_ast1)
+            }
         }
         crate::ast::SapASTBody::AssignSlot(sap_ast, sap_ast1) => {
             let a = if let crate::ast::SapASTBody::Id(id) = &sap_ast.body {
                 id.0.clone()
             } else {
-                compile_inner(*sap_ast)
+                unimplemented!("Expected id, got {:?}", sap_ast)
             };
             let b = compile_inner(*sap_ast1);
             format!("__new_slot_binding__(__ENV__, '{a}', {b})",)

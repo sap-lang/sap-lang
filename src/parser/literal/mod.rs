@@ -1,11 +1,7 @@
 use number::Number;
 use string::StringLiteral;
 
-use crate::{
-    ast::SapAST,
-    error_diag::SapParserError,
-    parser::Rule,
-};
+use crate::{ast::SapAST, error_diag::SapParserError, parser::Rule};
 
 pub mod array;
 pub mod number;

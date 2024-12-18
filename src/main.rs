@@ -13,38 +13,68 @@ fn main() {
         fib ::= \0 -> 0
         fib ::= \1 -> 1
         fib ::= \ x -> fib (x-1) + fib (x-2)
-        log (fib 10)
+        puts (fib 10)
     }"###;
 
     let cont = r###"{
         cont = \x -> {
             // operator overloading
-            (+) ::= \a b -> __op_add__ (a * 2) b
+            (+) ::= \a 0 : $a == "number" -> { puts "4" ; a }
+            (+) ::= \0 b : $b == "number" -> { puts "3" ; b }
+            (+) ::= \a b : $a == "number" -> { puts "2" ; __op_add__ (a * 2) b }
+            (+) ::= \a b : $a == "string" -> { puts "1" ; __op_add__ a b }
+
             // will effect current scope only
-            log (<- x + 1)
-            log (<- x + 2)
-            log (<- x + 3)
+            puts ("x: " + x)
+            puts ("0+1: " + (0 + 1))
+            puts ("c1: " + (<- x + 1))
+            puts ("c2: " + (<- x + 2))
             x + 4
         }
         a11 -> cont = cont 10
-        log a11
+        puts ("a11: " + a11)
         a12 -> cont = cont 11
-        log a12
-        a13 -> cont = cont 12
-        log a13
-        _a ->  cont = cont 13
-        
-        log _a
-        log cont
-        log (1 + 1)
+        puts ("a12: " + a12)
+        _a -> cont = cont 12
+        puts _a
+        puts cont
+        puts (1 + 1)
     }"###;
 
     let slice = r###"{
         v = [1,2,3,4,5,6,7,8,9][1::3]
-        log v
+        puts v
     }"###;
 
-    let ast = parser::parse(slice);
+    let simple_cont = r###"{
+        f = \x -> {
+            <- x + 2
+            <- x + 3
+            <- x + 4
+        }
+
+        g = \y -> {
+            <- y + 1
+            <<- f y
+            <- y + 5
+        }
+
+        a = 0
+        a -> next = g a
+        puts a
+        a -> next = g a
+        puts a
+        a -> next = g a
+        puts a
+        a -> next = g a
+        puts a
+        a -> next = g a
+        puts a
+        a -> next = g a
+        puts a
+    }"###;
+
+    let ast = parser::parse(fib);
     let mut file = std::fs::File::create("test.js").unwrap();
     let code = backend::js::compile(ast);
     file.write_all(code.as_bytes()).unwrap();

@@ -23,6 +23,7 @@ prefix_typeof  = @{ "$" }
 prefix_not     = @{ "!" }
 prefix_neg     = @{ "-" }
 prefix_yield   = @{ "<-" }
+prefix_yield_child   = @{ "<<-" }
 prefix_bit_not = @{ "~" }
 
 infix_add             = @{ "+" }
@@ -213,6 +214,7 @@ prefix_op = _{
   | prefix_bit_not
   | prefix_neg
   | prefix_yield
+  | prefix_yield_child
 }
 
 infix_op = _{
