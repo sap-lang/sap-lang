@@ -210,7 +210,13 @@ fn compile_inner(ast: SapAST) -> String {
             let implicit_params = if let Some(implicit_params) = implicit_params {
                 implicit_params
                     .into_iter()
-                    .map(compile_inner)
+                    .map(|x| {
+                        if let SapASTBody::Id(id) = x.body {
+                            id.0
+                        } else {
+                            unreachable!()
+                        }
+                    })
                     .map(|x| format!("__new_binding__(__ENV__, '{x}', __PENV__['{x}'])"))
                     .collect::<Vec<String>>()
                     .join(";")
