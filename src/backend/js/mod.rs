@@ -288,14 +288,39 @@ fn compile_inner(ast: SapAST) -> String {
             let block = compile_block(vec);
 
             format!(
-                "((()=>{{const _env = this.__ENV__; const __ENV__ = {{ }}; __ENV__.__proto__ = _env; {block}}})())"
+"
+async function __main__() {{
+    let main = (function*(){{{block}}})
+    let main_process = main();
+    try {{
+        let cont = undefined;
+        let ret = undefined;
+        while (1) {{
+            ret = main_process.next(cont)
+            if (ret.done) {{
+                break;
+            }}
+            cont = await ret.value;
+        }}
+    }} catch (e) {{
+        console.error(e);
+        return;
+    }}
+}}
+
+await __main__();
+__rl.close();
+"
             )
+            // format!(
+            //     "((()=>{{const _env = this.__ENV__; const __ENV__ = {{ }}; __ENV__.__proto__ = _env; {block}}})())"
+            // )
         }
         crate::ast::SapASTBody::Literal(literal) => compile_literal(literal),
         crate::ast::SapASTBody::Typeof(sap_ast) => format!("(typeof {})", compile_inner(*sap_ast)),
         crate::ast::SapASTBody::Yield(sap_ast) => format!("(yield {})", compile_inner(*sap_ast)),
         crate::ast::SapASTBody::YieldChild(sap_ast) => format!(
-            "(__is_return__({0}) && {0}.next !== undefined ? (yield* ({0}.next)) : (yield* {0}))",
+            "(yield* (function*(){{ const r = {0}; if (__is_return__(r)){{return (yield r.value)}} else {{return (yield* r)}} }})())",
             compile_inner(*sap_ast)
         ),
 
