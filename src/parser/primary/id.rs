@@ -2,7 +2,7 @@ use pest::iterators::Pair;
 
 use crate::{
     ast::{SapAST, SapASTBody},
-    error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
+    error_diag::{SapDiagnosticSpan, SapParserError},
 };
 
 use super::Rule;
@@ -11,12 +11,12 @@ fn parse_id_child(id: Pair<Rule>) -> Result<SapAST, SapParserError> {
     match id.as_rule() {
         Rule::normal_id => Ok(SapAST {
             span: SapDiagnosticSpan::from_pest_span(&id.as_span()),
-            body: SapASTBody::Id(Id::NormalId(id.as_str().to_string())),
+            body: SapASTBody::Id(Id(id.as_str().to_string())),
         }),
 
         Rule::magic_fn_id => Ok(SapAST {
             span: SapDiagnosticSpan::from_pest_span(&id.as_span()),
-            body: SapASTBody::Id(Id::MagicFnId(id.as_str().to_string())),
+            body: SapASTBody::Id(Id(id.as_str().to_string())),
         }),
 
         _ => unreachable!("Invalid id rule: {:?}", id),
@@ -28,11 +28,8 @@ pub fn parse_id(id: Pair<Rule>) -> Result<SapAST, SapParserError> {
     parse_id_child(id)
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Id {
-    NormalId(String),
-    MagicFnId(String),
-}
+#[derive(Debug, PartialEq, Clone)]
+pub struct Id(pub String);
 
 #[cfg(test)]
 mod tests {
@@ -53,7 +50,7 @@ mod tests {
             "สวัสดีชาวโลก",
             "안녕하세요",
             "مرحبا",
-            "🖖"
+            "🖖",
         ];
 
         for input in inputs {
@@ -61,8 +58,8 @@ mod tests {
             let id = id.next().unwrap();
             let ast = parse_id(id).unwrap();
             match ast.body {
-                SapASTBody::Id(Id::NormalId(s)) => assert_eq!(s, input.trim()),
-                _ => panic!("Expected Id::NormalId"),
+                SapASTBody::Id(Id(s)) => assert_eq!(s, input.trim()),
+                _ => panic!("Expected Id, found {:?}", ast.body),
             }
         }
     }

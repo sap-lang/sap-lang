@@ -1,14 +1,16 @@
 use number::Number;
 use string::StringLiteral;
 
-use crate::{ast::{SapAST, SapASTBody}, error_diag::{SapDiagnosticSpan, SapParserError}, parser::Rule};
+use crate::{
+    ast::SapAST,
+    error_diag::SapParserError,
+    parser::Rule,
+};
 
-
-pub mod number;
-pub mod string;
 pub mod array;
+pub mod number;
 pub mod object;
-
+pub mod string;
 
 fn parse_boolean(pair: pest::iterators::Pair<Rule>) -> Literal {
     match pair.as_rule() {
@@ -47,29 +49,32 @@ fn parse_slot(pair: pest::iterators::Pair<Rule>) -> Literal {
 }
 
 fn parse_literal_child(pair: pest::iterators::Pair<Rule>) -> Result<Literal, SapParserError> {
-
-    Ok( match pair.as_rule() {
-            Rule::boolean => parse_boolean(pair),
-            Rule::null => parse_null(pair),
-            Rule::undefined => parse_undefined(pair),
-            Rule::void => parse_void(pair),
-            Rule::slot => parse_slot(pair),
-            Rule::number => Literal::Number(number::parse_number(pair)),
-            Rule::normal_string_inner | Rule::multiline_string_inner | Rule::raw_string_inner => Literal::String(string::parse_string(pair)),
-            Rule::array_literal => array::parse_array(pair)?,
-            Rule::object_literal => object::parse_object(pair)?,
-            _ => unreachable!("Unexpected rule: {:?}", pair.as_rule()),
-        })
-    
-    
+    Ok(match pair.as_rule() {
+        Rule::boolean => parse_boolean(pair),
+        Rule::null => parse_null(pair),
+        Rule::undefined => parse_undefined(pair),
+        Rule::void => parse_void(pair),
+        Rule::slot => parse_slot(pair),
+        Rule::number => Literal::Number(number::parse_number(pair)),
+        Rule::normal_string_inner | Rule::multiline_string_inner | Rule::raw_string_inner => {
+            Literal::String(string::parse_string(pair))
+        }
+        Rule::array_literal => array::parse_array(pair)?,
+        Rule::object_literal => object::parse_object(pair)?,
+        _ => unreachable!("Unexpected rule: {:?}", pair.as_rule()),
+    })
 }
 
 pub fn parse_literal(pair: pest::iterators::Pair<Rule>) -> Result<Literal, SapParserError> {
     assert_eq!(pair.as_rule(), Rule::literal);
-    parse_literal_child(pair.into_inner().next().expect("Literal should have a child"))
+    parse_literal_child(
+        pair.into_inner()
+            .next()
+            .expect("Literal should have a child"),
+    )
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Null,
     Undefined,

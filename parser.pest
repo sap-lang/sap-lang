@@ -13,8 +13,8 @@ COMMENT   = _{ single_line_comment | multiline_comment }
 next_stmt = _{ ";" | NEWLINE+ }
 
 
-start    = @{ XID_START | EMOJI }
-continue = @{ XID_CONTINUE | EMOJI }
+start    = @{ XID_START | EMOJI_PRESENTATION }
+continue = @{ XID_CONTINUE | EMOJI_PRESENTATION }
 
 normal_id = @{ start ~ continue* | "_" ~ continue+ }
 id        =  { normal_id | magic_fn_id }
@@ -75,10 +75,9 @@ magic_fn_id = @{
   | "(>>)"
   | "(!)"
   | "(~)"
+  | "([])"  
   | "(neg)"
   | "(bang)"
-  | "(index)"
-  | "(access)"
 }
 
 // ========== Literals ==========
@@ -171,7 +170,7 @@ object_literal =  {
 null      = { "null" }
 undefined = { "undefined" }
 void      = { "(" ~ ")" }
-slot      = { "_" }
+slot      = { "<>" }
 
 // ----- sum ------
 

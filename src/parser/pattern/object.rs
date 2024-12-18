@@ -4,7 +4,10 @@ use crate::{
     ast::{SapAST, SapASTBody},
     error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
     parser::{
-        expr::parse_expr, literal::string::parse_string, pattern::{parse_eclipse_pattern, parse_pattern, ObjectInner}, pratt_parser, primary::id::parse_id, Rule
+        Rule,
+        literal::string::parse_string,
+        pattern::{ObjectInner, parse_eclipse_pattern, parse_pattern},
+        primary::id::parse_id,
     },
 };
 
@@ -43,7 +46,9 @@ pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<Pattern, SapPa
                 let inner_string = parse_string(k).to_string();
                 SapAST {
                     span: k_span.clone(),
-                    body: SapASTBody::Pattern(super::Pattern::Id(crate::parser::primary::id::Id::NormalId(inner_string))),
+                    body: SapASTBody::Pattern(super::Pattern::Id(crate::parser::primary::id::Id(
+                        inner_string,
+                    ))),
                 }
             }
             _ => unreachable!("Invalid key rule: {:?}", k),
@@ -63,12 +68,7 @@ mod tests {
 
     #[test]
     fn test_parse_object() {
-        let inputs = [
-            "{}",
-            "{key: 1}",
-            "{a: 3, \"b\": 4}",
-            "{...p}",
-        ];
+        let inputs = ["{}", "{key: 1}", "{a: 3, \"b\": 4}", "{...p}"];
 
         for input in inputs {
             let mut object_literal =

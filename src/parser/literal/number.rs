@@ -32,7 +32,6 @@ fn parse_int(pair: pest::iterators::Pair<Rule>) -> Number {
     }
 }
 
-
 fn parse_float(pair: pest::iterators::Pair<Rule>) -> Number {
     let pair = pair.into_inner().next().expect("Float should have a child");
     match pair.as_rule() {
@@ -58,11 +57,13 @@ fn parse_float(pair: pest::iterators::Pair<Rule>) -> Number {
             let int = float2s
                 .next()
                 .map(parse_int)
-                .expect("Float2 should have an int").as_int();
+                .expect("Float2 should have an int")
+                .as_int();
             let frac = float2s
                 .next()
                 .map(parse_int)
-                .expect("Float2 should have an int").as_int();
+                .expect("Float2 should have an int")
+                .as_int();
             let exp = float2s
                 .next()
                 .map(|exp| {
@@ -71,11 +72,11 @@ fn parse_float(pair: pest::iterators::Pair<Rule>) -> Number {
                         .expect("Float2 exp should have a child")
                 })
                 .map(|exp| parse_int(exp))
-                .unwrap_or(Number::Int(0)).as_int();
+                .unwrap_or(Number::Int(0))
+                .as_int();
 
-            let num = (int as f64
-                + frac as f64 * 10.0_f64.powi(- (frac.to_string().len() as i32)))
-                    * 10.0_f64.powi(exp as i32);
+            let num = (int as f64 + frac as f64 * 10.0_f64.powi(-(frac.to_string().len() as i32)))
+                * 10.0_f64.powi(exp as i32);
             Number::Float(num)
         }
         Rule::float3 => {
@@ -102,7 +103,6 @@ fn parse_float(pair: pest::iterators::Pair<Rule>) -> Number {
     }
 }
 
-
 pub fn parse_number(pair: pest::iterators::Pair<Rule>) -> Number {
     let pair = pair
         .into_inner()
@@ -116,7 +116,7 @@ pub fn parse_number(pair: pest::iterators::Pair<Rule>) -> Number {
         _ => unreachable!(),
     }
 }
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Number {
     Int(i64),
     Float(f64),
@@ -134,8 +134,8 @@ impl Number {
 
 #[cfg(test)]
 mod tests {
-    use pest::Parser;
     use super::*;
+    use pest::Parser;
 
     #[test]
     fn test_parse_int() {

@@ -118,7 +118,7 @@ pub fn parse_string(str: Pair<Rule>) -> StringLiteral {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StringLiteral {
     SingleLine(String),
     MultiLine(String),

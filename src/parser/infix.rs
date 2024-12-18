@@ -3,7 +3,6 @@ use pest::iterators::Pair;
 use crate::{
     ast::{SapAST, SapASTBody},
     error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
-    parser::literal,
 };
 
 use super::Rule;
@@ -156,7 +155,7 @@ pub fn parse_infix(
                 span: span.clone(),
                 body: SapASTBody::App(Box::new(id), vec![lhs, rhs]),
             })
-        },
+        }
         Rule::infix_assign_get_cont => {
             let cont_id = pair.into_inner().next().unwrap();
             let cont_id = crate::parser::primary::id::parse_id(cont_id)?;

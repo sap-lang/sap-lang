@@ -1,9 +1,8 @@
 use pest::iterators::Pair;
 
 use crate::{
-    ast::{SapAST, SapASTBody},
     error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
-    parser::{expr::parse_expr, pratt_parser, Rule},
+    parser::{Rule, expr::parse_expr, pratt_parser},
 };
 
 use super::Literal;
@@ -14,12 +13,12 @@ pub fn parse_object(object_literal: Pair<Rule>) -> Result<Literal, SapParserErro
     for elem in object_literal.into_inner() {
         let span = SapDiagnosticSpan::from_pest_span(&elem.as_span());
         let mut kv = elem.into_inner();
-        let k = kv.next().ok_or(SapParserError{
+        let k = kv.next().ok_or(SapParserError {
             span: span.clone(),
             code: SapParserErrorCode::InvalidKVPair,
             message: "Expected key-value pair".to_string(),
         })?;
-        let v = kv.next().ok_or(SapParserError{
+        let v = kv.next().ok_or(SapParserError {
             span,
             code: SapParserErrorCode::InvalidKVPair,
             message: "Expected key-value pair".to_string(),
@@ -45,7 +44,7 @@ mod tests {
             "{key: 1}",
             "{1: {\"key\": 2}}",
             "{a: 3, \"b\": 4}",
-            "{a: 5, \\b -> b : 6, \"c\": {(): 7}, \"e\": 8}"
+            "{a: 5, \\b -> b : 6, \"c\": {(): 7}, \"e\": 8}",
         ];
 
         for input in inputs {
