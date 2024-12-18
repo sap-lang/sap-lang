@@ -9,15 +9,18 @@ pub mod parser;
 pub mod backend;
 
 fn main() {
-    let source = r###"{
-        // fib ::= \0 -> 0
-        // fib ::= \1 -> 1
-        // fib ::= \ x -> fib (x-1) + fib (x-2)
-        // log (fib 10)
+    let fib = r###"{
+        fib ::= \0 -> 0
+        fib ::= \1 -> 1
+        fib ::= \ x -> fib (x-1) + fib (x-2)
+        log (fib 10)
+    }"###;
 
+    let cont = r###"{
         cont = \x -> {
+            // operator overloading
             (+) ::= \a b -> __op_add__ (a * 2) b
-
+            // will effect current scope only
             log (<- x + 1)
             log (<- x + 2)
             log (<- x + 3)
@@ -34,9 +37,14 @@ fn main() {
         log _a
         log cont
         log (1 + 1)
-
     }"###;
-    let ast = parser::parse(source);
+
+    let slice = r###"{
+        v = [1,2,3,4,5,6,7,8,9][1::3]
+        log v
+    }"###;
+
+    let ast = parser::parse(slice);
     let mut file = std::fs::File::create("test.js").unwrap();
     let code = backend::js::compile(ast);
     file.write_all(code.as_bytes()).unwrap();
