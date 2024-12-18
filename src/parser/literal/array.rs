@@ -1,8 +1,7 @@
 use pest::iterators::Pair;
 
 use crate::{
-    ast::{SapAST, SapASTBody},
-    error_diag::{SapDiagnosticSpan, SapParserError},
+    error_diag::SapParserError,
     parser::{Rule, expr::parse_expr, pratt_parser},
 };
 

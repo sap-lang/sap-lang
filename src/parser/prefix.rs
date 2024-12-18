@@ -1,6 +1,9 @@
 use pest::iterators::Pair;
 
-use crate::{ast::{SapAST, SapASTBody}, error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode}};
+use crate::{
+    ast::{SapAST, SapASTBody},
+    error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
+};
 
 use super::Rule;
 
@@ -26,23 +29,23 @@ pub fn parse_prefix(
     };
 
     match pair.as_rule() {
-        Rule::prefix_typeof => Ok(SapAST{
+        Rule::prefix_typeof => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::Typeof(Box::new(rhs)),
         }),
-        Rule::prefix_not => Ok(SapAST{
+        Rule::prefix_not => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::Not(Box::new(rhs)),
         }),
-        Rule::prefix_neg => Ok(SapAST{
+        Rule::prefix_neg => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::Neg(Box::new(rhs)),
         }),
-        Rule::prefix_bit_not => Ok(SapAST{
+        Rule::prefix_bit_not => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::BitNot(Box::new(rhs)),
         }),
-        Rule::prefix_yield => Ok(SapAST{
+        Rule::prefix_yield => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::Yield(Box::new(rhs)),
         }),

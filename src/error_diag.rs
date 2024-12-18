@@ -1,7 +1,7 @@
 use pest::Span;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SapParserErrorCode {
     NOP = 0,
 
@@ -13,7 +13,7 @@ pub enum SapParserErrorCode {
     PatternShouldNotBeOperand,
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub struct SapParserError {
     pub span: SapDiagnosticSpan,
     pub code: SapParserErrorCode,

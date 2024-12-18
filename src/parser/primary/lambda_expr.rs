@@ -108,7 +108,7 @@ pub fn parse_lambda_expr(lambda_expr: Pair<Rule>) -> Result<SapAST, SapParserErr
     parse_lambda_expr_child(lambda_expr)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LambdaExpr {
     pub patterns: Vec<SapAST>,
     pub implicit_params: Option<Vec<SapAST>>,
@@ -133,8 +133,7 @@ mod tests {
             r#"\a b ? c : d -> c"#,
         ];
 
-    
-    for input in inputs {
+        for input in inputs {
             let mut lambda = crate::parser::SapParser::parse(Rule::lambda_expr, input).unwrap();
             let id = lambda.next().unwrap();
             let ast = parse_lambda_expr(id).unwrap();

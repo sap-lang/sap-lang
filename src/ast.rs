@@ -1,11 +1,16 @@
-use pest::Span;
 
-use crate::{error_diag::{SapDiagnosticSpan, SapParserError}, parser::{literal::Literal, pattern::Pattern, primary::{id::Id, lambda_expr::LambdaExpr}}};
+use crate::{
+    error_diag::{SapDiagnosticSpan, SapParserError},
+    parser::{
+        literal::Literal,
+        pattern::Pattern,
+        primary::{id::Id, lambda_expr::LambdaExpr},
+    },
+};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SapASTBody {
     Error(SapParserError),
-
     Id(Id),
     LambdaExpr(LambdaExpr),
     Pattern(Pattern),
@@ -21,27 +26,26 @@ pub enum SapASTBody {
 
     // postfix
 
-
     // infix
     Assign(
         // pattern
-        Box<SapAST>, 
+        Box<SapAST>,
         // expr
-        Box<SapAST>
+        Box<SapAST>,
     ),
     AssignGetCont(
         // pattern
-        Box<SapAST>, 
+        Box<SapAST>,
         // cont
         Box<SapAST>,
         // expr
-        Box<SapAST>
+        Box<SapAST>,
     ),
     AssignSlot(
         // id or access
         Box<SapAST>,
         // expr
-        Box<SapAST>
+        Box<SapAST>,
     ),
     Add(Box<SapAST>, Box<SapAST>),
     Sub(Box<SapAST>, Box<SapAST>),
@@ -62,7 +66,6 @@ pub enum SapASTBody {
     BitXor(Box<SapAST>, Box<SapAST>),
     BitShiftL(Box<SapAST>, Box<SapAST>),
     BitShiftR(Box<SapAST>, Box<SapAST>),
-    Function(Box<SapAST>, Box<SapAST>),
 
     // chain
     Slice(
@@ -73,30 +76,29 @@ pub enum SapASTBody {
         // to expr
         Option<Box<SapAST>>,
         // step expr
-        Option<Box<SapAST>>
+        Option<Box<SapAST>>,
     ),
     Access(
         // expr
         Box<SapAST>,
         // id
-        Box<SapAST>
+        Box<SapAST>,
     ),
     Index(
         // expr
         Box<SapAST>,
         // expr
-        Box<SapAST>
+        Box<SapAST>,
     ),
     App(
         // expr
         Box<SapAST>,
         // expr
-        Vec<SapAST>
+        Vec<SapAST>,
     ),
 }
 
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SapAST {
     pub span: SapDiagnosticSpan,
     pub body: SapASTBody,
