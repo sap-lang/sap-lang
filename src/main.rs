@@ -74,7 +74,25 @@ fn main() {
         puts a
     }"###;
 
-    let ast = parser::parse(fib);
+    let simple_coeffect = r###"{
+        f = \x ? y -> {
+            puts (x + y)
+        }
+
+        g = \ null -> {
+            y = 10
+            puts (f 1)
+            puts (f 2)
+        }
+
+        y = 5
+        puts (f 1)
+        puts (f 2)
+
+        g null
+    }"###;
+
+    let ast = parser::parse(simple_coeffect);
     let mut file = std::fs::File::create("test.js").unwrap();
     let code = backend::js::compile(ast);
     file.write_all(code.as_bytes()).unwrap();
