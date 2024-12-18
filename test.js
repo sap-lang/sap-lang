@@ -404,3 +404,22 @@ function __call__(env, f, ...args) {
         throw new Error(`Not a function: ${f}`);
     }
 }
+((()=>{const _env = this.__ENV__; const __ENV__ = { }; __ENV__.__proto__ = _env; __new_slot_binding__(__ENV__, 'fib', 
+(function*(__PENV__, _0) {const __ENV__ = { }; __ENV__.__proto__ = __PENV__;
+        if (__extract_return__((0 === _0))) {
+        ; return 0;
+        } else {throw new Error('pattern matching failed');}
+})
+);__new_slot_binding__(__ENV__, 'fib', 
+(function*(__PENV__, _0) {const __ENV__ = { }; __ENV__.__proto__ = __PENV__;
+        if (__extract_return__((1 === _0))) {
+        ; return 1;
+        } else {throw new Error('pattern matching failed');}
+})
+);__new_slot_binding__(__ENV__, 'fib', 
+(function*(__PENV__, _0) {const __ENV__ = { }; __ENV__.__proto__ = __PENV__;
+        if (__extract_return__((( ()=>{ {let x = _0;__new_binding__(__ENV__, 'x', x)}; return true; } )()))) {
+        ; return __call__(__ENV__, __ENV__['(+)'], __call__(__ENV__, __ENV__['fib'], __call__(__ENV__, __ENV__['(-)'], __ENV__['x'], 1)), __call__(__ENV__, __ENV__['fib'], __call__(__ENV__, __ENV__['(-)'], __ENV__['x'], 2)));
+        } else {throw new Error('pattern matching failed');}
+})
+);return __call__(__ENV__, __ENV__['puts'], __call__(__ENV__, __ENV__['fib'], 10));})())

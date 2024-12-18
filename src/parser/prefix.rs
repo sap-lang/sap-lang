@@ -49,6 +49,10 @@ pub fn parse_prefix(
             span: span.clone(),
             body: SapASTBody::Yield(Box::new(rhs)),
         }),
+        Rule::prefix_yield_child => Ok(SapAST {
+            span: span.clone(),
+            body: SapASTBody::YieldChild(Box::new(rhs)),
+        }),
         _ => unimplemented!("Unhandled prefix rule: {:?}", pair),
     }
 }

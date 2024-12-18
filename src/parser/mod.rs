@@ -35,7 +35,7 @@ pub fn pratt_parser() -> &'static PrattParser<Rule> {
             // level 15 _ ~id~ _
             .op(Op::infix(Rule::infix_function, Assoc::Left))
             // level 14 <- _
-            .op(Op::prefix(Rule::prefix_yield))
+            .op(Op::prefix(Rule::prefix_yield) | Op::prefix(Rule::prefix_yield_child))
             // level 13 _ <: _
             .op(Op::infix(Rule::infix_extends, Assoc::Right))
             // level 12 _ || _

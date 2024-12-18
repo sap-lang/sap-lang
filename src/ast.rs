@@ -1,4 +1,3 @@
-
 use crate::{
     error_diag::{SapDiagnosticSpan, SapParserError},
     parser::{
@@ -23,6 +22,7 @@ pub enum SapASTBody {
     Neg(Box<SapAST>),
     BitNot(Box<SapAST>),
     Yield(Box<SapAST>),
+    YieldChild(Box<SapAST>),
 
     // postfix
 
