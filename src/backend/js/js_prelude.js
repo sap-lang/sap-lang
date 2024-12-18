@@ -1,4 +1,8 @@
-this.__ENV__ = {
+import { createInterface } from 'readline/promises';
+import { stdin as input, stdout as output } from 'process';
+let __rl = createInterface({ input, output });
+
+const __ENV__ = {
     "(+)": {
         'slot': [
             function* (__PENV__, a, b) {
@@ -14,6 +18,9 @@ this.__ENV__ = {
                 } else {
                     throw new Error('guard failed');
                 }
+            },
+            function* (__PENV__, a, b) {
+                return a + b
             }
         ]
     },
@@ -266,34 +273,34 @@ this.__ENV__ = {
         }
     },
     "gets": function* (__PENV__, question) {
-        throw new Error('Not implemented');
+        return yield __rl.question(question);
     },
 }
 
-this.__ENV__["__op_add__"] = this.__ENV__["(+)"];
-this.__ENV__["__op_sub__"] = this.__ENV__["(-)"];
-this.__ENV__["__op_mul__"] = this.__ENV__["(*)"];
-this.__ENV__["__op_div__"] = this.__ENV__["(/)"];
-this.__ENV__["__op_mod__"] = this.__ENV__["(%)"];
-this.__ENV__["__op_eq__"] = this.__ENV__["(==)"];
-this.__ENV__["__op_neq__"] = this.__ENV__["(!=)"];
-this.__ENV__["__op_le__"] = this.__ENV__["(<=)"];
-this.__ENV__["__op_ge__"] = this.__ENV__["(>=)"];
-this.__ENV__["__op_lt__"] = this.__ENV__["(<)"];
-this.__ENV__["__op_gt__"] = this.__ENV__["(>)"];
-this.__ENV__["__op_and__"] = this.__ENV__["(&&)"];
-this.__ENV__["__op_or__"] = this.__ENV__["(||)"];
-this.__ENV__["__op_bitor__"] = this.__ENV__["(|)"];
-this.__ENV__["__op_bitand__"] = this.__ENV__["(&)"];
-this.__ENV__["__op_bitxor__"] = this.__ENV__["(^)"];
-this.__ENV__["__op_shl__"] = this.__ENV__["(<<)"];
-this.__ENV__["__op_shr__"] = this.__ENV__["(>>)"];
-this.__ENV__["__op_not__"] = this.__ENV__["(!)"];
-this.__ENV__["__op_neg__"] = this.__ENV__["(neg)"];
-this.__ENV__["__op_bitnot__"] = this.__ENV__["(~)"];
-this.__ENV__["__op_index__"] = this.__ENV__["([])"];
-this.__ENV__["__op_slice__"] = this.__ENV__["(slice)"];
-this.__ENV__["__op_log__"] = this.__ENV__["log"];
+__ENV__["__op_add__"] = __ENV__["(+)"];
+__ENV__["__op_sub__"] = __ENV__["(-)"];
+__ENV__["__op_mul__"] = __ENV__["(*)"];
+__ENV__["__op_div__"] = __ENV__["(/)"];
+__ENV__["__op_mod__"] = __ENV__["(%)"];
+__ENV__["__op_eq__"] = __ENV__["(==)"];
+__ENV__["__op_neq__"] = __ENV__["(!=)"];
+__ENV__["__op_le__"] = __ENV__["(<=)"];
+__ENV__["__op_ge__"] = __ENV__["(>=)"];
+__ENV__["__op_lt__"] = __ENV__["(<)"];
+__ENV__["__op_gt__"] = __ENV__["(>)"];
+__ENV__["__op_and__"] = __ENV__["(&&)"];
+__ENV__["__op_or__"] = __ENV__["(||)"];
+__ENV__["__op_bitor__"] = __ENV__["(|)"];
+__ENV__["__op_bitand__"] = __ENV__["(&)"];
+__ENV__["__op_bitxor__"] = __ENV__["(^)"];
+__ENV__["__op_shl__"] = __ENV__["(<<)"];
+__ENV__["__op_shr__"] = __ENV__["(>>)"];
+__ENV__["__op_not__"] = __ENV__["(!)"];
+__ENV__["__op_neg__"] = __ENV__["(neg)"];
+__ENV__["__op_bitnot__"] = __ENV__["(~)"];
+__ENV__["__op_index__"] = __ENV__["([])"];
+__ENV__["__op_slice__"] = __ENV__["(slice)"];
+__ENV__["__op_log__"] = __ENV__["log"];
 
 
 function __new_binding__(env, id, value) {

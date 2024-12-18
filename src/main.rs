@@ -92,7 +92,12 @@ fn main() {
         g null
     }"###;
 
-    let ast = parser::parse(simple_coeffect);
+    let test_io = r###"{
+        name = <<- gets "Enter your name: "
+        puts ("Hello, " + name )
+    }"###;
+
+    let ast = parser::parse(test_io);
     let mut file = std::fs::File::create("test.js").unwrap();
     let code = backend::js::compile(ast);
     file.write_all(code.as_bytes()).unwrap();
