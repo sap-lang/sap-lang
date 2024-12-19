@@ -80,10 +80,13 @@ fn parse_expr(source: &str) -> SapAST {
     expr::parse_expr(parser.next().unwrap().into_inner(), pratt).unwrap()
 }
 
-
 pub fn parse(source: &str) -> Vec<SapAST> {
     let source = format!("{{ {source} }}");
-    if let SapAST { span: _, body: SapASTBody::Block(vec) } = parse_expr(source.as_str()) {
+    if let SapAST {
+        span: _,
+        body: SapASTBody::Block(vec),
+    } = parse_expr(source.as_str())
+    {
         vec
     } else {
         panic!("Expected block")

@@ -131,7 +131,7 @@ fn compile_literal(literal: crate::parser::literal::Literal) -> String {
         crate::parser::literal::Literal::Object(vec) => format!(
             "{{{}}}",
             vec.into_iter()
-                .map(|(k, v)| format!("{}: {}", compile_inner(k), compile_inner(v)))
+                .map(|(k, v)| format!("{}: {}", k, compile_inner(v)))
                 .collect::<Vec<String>>()
                 .join(",")
         ),
@@ -357,6 +357,13 @@ fn compile_inner(ast: SapAST) -> String {
             format!("__new_slot_binding__(__ENV__, '{a}', {b})",)
         }
 
+        crate::ast::SapASTBody::If(cond, then, else_) => {
+            let cond = compile_inner(*cond);
+            let then = compile_inner(*then);
+            let else_ = compile_inner(*else_);
+            format!("((()=>{{if ({cond}) {{return {then}}} else {{return {else_}}}}})())")
+        }
+
         crate::ast::SapASTBody::Not(sap_ast) => {
             format!(
                 "__call__(__ENV__, __ENV__['(!)'], {})",
@@ -487,11 +494,7 @@ fn compile_inner(ast: SapAST) -> String {
                 .unwrap_or("1".to_string())
         ),
         crate::ast::SapASTBody::Access(sap_ast, sap_ast1) => {
-            format!(
-                "{}['{}']",
-                compile_inner(*sap_ast),
-                compile_inner(*sap_ast1)
-            )
+            format!("{}['{}']", compile_inner(*sap_ast), sap_ast1.0)
         }
         crate::ast::SapASTBody::Index(sap_ast, sap_ast1) => format!(
             "__call__(__ENV__, __ENV__['([])'], {}, {})",

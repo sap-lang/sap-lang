@@ -30,7 +30,18 @@ fn parse_op_expr_child(pair: Pair<Rule>) -> Result<SapAST, SapParserError> {
                 body: crate::ast::SapASTBody::Block(vec),
             })
         }
-        _ => unimplemented!("Unhandled primary rule: {:?}", pair),
+        Rule::boolean_if => {
+            let mut pairs = pair.into_inner();
+            let cond = parse_op_expr_child(pairs.next().expect("If should have a condition"))?;
+            let then = parse_op_expr_child(pairs.next().expect("If should have a condition"))?;
+            let else_ = parse_op_expr_child(pairs.next().expect("If should have a condition"))?;
+
+            Ok(SapAST {
+                span: span.clone(),
+                body: crate::ast::SapASTBody::If(Box::new(cond), Box::new(then), Box::new(else_)),
+            })
+        }
+        _ => unimplemented!("Unhandled op_expr_child rule: {:?}", pair),
     }
 }
 
@@ -47,6 +58,7 @@ fn parse_op_expr(pair: Pair<Rule>) -> Result<SapAST, SapParserError> {
             .into_inner()
             .next()
             .expect("ChainOp should have a child");
+
         match chain_op.as_rule() {
             Rule::slice => {
                 let inner = chain_op.into_inner();
@@ -90,10 +102,21 @@ fn parse_op_expr(pair: Pair<Rule>) -> Result<SapAST, SapParserError> {
                     .next()
                     .expect("Access should have a child");
                 let id = id::parse_id(inner)?;
-                res = SapAST {
-                    span: span.clone(),
-                    body: crate::ast::SapASTBody::Access(Box::new(res), Box::new(id)),
-                };
+                if let crate::ast::SapASTBody::Id(id) = id.body {
+                    res = SapAST {
+                        span: span.clone(),
+                        body: crate::ast::SapASTBody::Access(Box::new(res), id),
+                    };
+                } else {
+                    res = SapAST {
+                        span: span.clone(),
+                        body: crate::ast::SapASTBody::Error(SapParserError {
+                            span: id.span,
+                            code: crate::error_diag::SapParserErrorCode::ExpectedId,
+                            message: "Expected Id, found something else".to_string(),
+                        }),
+                    };
+                }
             }
             _ => unreachable!("Unhandled chain op rule: {:?}", chain_op),
         }

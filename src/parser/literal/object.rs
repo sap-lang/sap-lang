@@ -2,7 +2,7 @@ use pest::iterators::Pair;
 
 use crate::{
     error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
-    parser::{Rule, expr::parse_expr, pratt_parser},
+    parser::{Rule, expr::parse_expr, pratt_parser, primary::id::Id},
 };
 
 use super::Literal;
@@ -25,6 +25,16 @@ pub fn parse_object(object_literal: Pair<Rule>) -> Result<Literal, SapParserErro
         })?;
 
         let key = parse_expr(k.into_inner(), pratt_parser())?;
+        let key = match key.body {
+            // id
+            crate::ast::SapASTBody::Id(Id(id)) => id,
+            // literal string
+            crate::ast::SapASTBody::Literal(literal) => match literal {
+                Literal::String(s) => s.to_string(),
+                _ => unreachable!("Expected string, found {:?}", literal),
+            },
+            _ => unreachable!("Expected id or string, found {:?}", key),
+        };
         let value = parse_expr(v.into_inner(), pratt_parser())?;
         elems.push((key, value));
     }

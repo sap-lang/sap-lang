@@ -8,6 +8,8 @@ pub enum SapParserErrorCode {
     InvalidLambdaExpr,
     InvalidKVPair,
 
+    ExpectedId,
+
     AssignExprLHSNotAssignable,
     LHSIsNotSlotNorReferring,
     PatternShouldNotBeOperand,

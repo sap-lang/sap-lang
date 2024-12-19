@@ -68,6 +68,15 @@ pub enum SapASTBody {
     BitShiftR(Box<SapAST>, Box<SapAST>),
 
     // chain
+    If(
+        // cond
+        Box<SapAST>,
+        // then
+        Box<SapAST>,
+        // else
+        Box<SapAST>,
+    ),
+
     Slice(
         // expr
         Box<SapAST>,
@@ -82,7 +91,7 @@ pub enum SapASTBody {
         // expr
         Box<SapAST>,
         // id
-        Box<SapAST>,
+        Id,
     ),
     Index(
         // expr

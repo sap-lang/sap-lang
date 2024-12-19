@@ -1,0 +1,11 @@
+B = \ b -> {b : b}
+A = \ a s -> {a : a} <: s
+
+
+a = A 1 (B 2)
+
+// 1
+puts a.a
+
+// 2
+puts a.b

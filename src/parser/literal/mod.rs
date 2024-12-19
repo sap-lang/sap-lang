@@ -80,5 +80,5 @@ pub enum Literal {
     Number(Number),
     String(StringLiteral),
     Array(Vec<SapAST>),
-    Object(Vec<(SapAST, SapAST)>),
+    Object(Vec<(String, SapAST)>),
 }
