@@ -1,0 +1,23 @@
+cont = \x -> {
+    // operator overloading
+    (+) ::= \a b : $a == "number" -> { puts "internal case inner" ; __op_add__ (a * 2) b }
+    (+) ::= \a b : $a == "string" -> { puts "internal case string" ; __op_add__ a b }
+
+    // will effect current scope only
+    puts ("\tx: " + x)
+    puts ("\tc1: " + (<- x + 1))
+    puts ("\tc2: " + (<- x + 2))
+    x + 4
+}
+
+a11 -> cont = cont 10
+puts ("\ta11: " + a11)
+
+a12 -> cont = cont 11
+puts ("\ta12: " + a12)
+
+_a -> cont = cont 12
+
+puts _a
+puts cont
+puts (1 + 1)

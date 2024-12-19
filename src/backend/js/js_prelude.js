@@ -13,7 +13,7 @@ const __ENV__ = {
                 }
             },
             function* (__PENV__, a, b) {
-                if (typeof a === 'string' && typeof b === 'number') {
+                if ((typeof a === 'string' && typeof b === 'number') || (typeof b === 'string' && typeof a === 'number')) {
                     return a + b
                 } else {
                     throw new Error('guard failed');
@@ -267,9 +267,13 @@ const __ENV__ = {
     "puts": function* (__PENV__, a) {
         if (__is_return__(a)) {
             const { value, ..._ } = a;
-            console.log(JSON.stringify(value, null, 2));
+            // console.log(JSON.stringify(value, null, 2));
+            console.log(value);
+            return value;
         } else {
-            console.log(JSON.stringify(a, null, 2));
+            // console.log(JSON.stringify(a, null, 2));
+            console.log(a)
+            return a;
         }
     },
     "gets": function* (__PENV__, question) {
