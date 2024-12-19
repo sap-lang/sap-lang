@@ -74,8 +74,18 @@ pub fn pratt_parser() -> &'static PrattParser<Rule> {
     })
 }
 
-pub fn parse(source: &str) -> SapAST {
+fn parse_expr(source: &str) -> SapAST {
     let pratt = pratt_parser();
     let mut parser = SapParser::parse(Rule::expr, source).unwrap();
     expr::parse_expr(parser.next().unwrap().into_inner(), pratt).unwrap()
+}
+
+
+pub fn parse(source: &str) -> Vec<SapAST> {
+    let source = format!("{{ {source} }}");
+    if let SapAST { span: _, body: SapASTBody::Block(vec) } = parse_expr(source.as_str()) {
+        vec
+    } else {
+        panic!("Expected block")
+    }
 }

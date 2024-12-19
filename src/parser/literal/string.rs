@@ -93,6 +93,8 @@ fn handle_escape(str: &str, multiline: bool) -> String {
     handle_special_escape(handle_c_escape(str, multiline))
 }
 
+// FIXME: bug, " + " parse to "+ "
+// FIXME: bug, ` + ` to unreachable
 fn parse_string_inner(str: Pairs<Rule>, multiline: bool) -> String {
     str.map(|s| match s.as_rule() {
         Rule::normal_string_fragment => s.as_str().to_string(),

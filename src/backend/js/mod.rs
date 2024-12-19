@@ -150,12 +150,11 @@ fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
                     unreachable!()
                 }
             })
-            .map(find_all_ids_in_pattern)
-            .flatten()
+            .flat_map(find_all_ids_in_pattern)
             .collect(),
         Pattern::Object(vec) => vec
-            .into_iter()
-            .map(|object_inner| match object_inner {
+            .iter()
+            .flat_map(|object_inner| match object_inner {
                 ObjectInner::KV(_k, v) => {
                     let v = if let SapASTBody::Pattern(p) = &v.body {
                         p
@@ -166,15 +165,50 @@ fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
                 }
                 ObjectInner::Eclipse(EclipsePattern(id)) => vec![id.0.clone()],
             })
-            .flatten()
             .collect(),
         Pattern::Literal(_) => vec![],
         Pattern::Eclipse(EclipsePattern(id)) => vec![id.0.clone()],
     }
 }
 
-pub fn compile(ast: SapAST) -> String {
-    APPEND_FILE.to_string() + &compile_inner(ast)
+pub fn compile(ast: Vec<SapAST>) -> String {
+    let append_file = APPEND_FILE;
+    let body = ast
+        .into_iter()
+        .map(compile_inner)
+        .collect::<Vec<String>>()
+        .join(";\n");
+    format!(
+        "
+{append_file}
+
+async function __main__() {{
+    let main = (function*(){{
+        {body}
+    }});
+
+    let main_process = main();
+    try {{
+        let cont = undefined;
+        let ret = undefined;
+        while (1) {{
+            ret = main_process.next(cont)
+            if (ret.done) {{
+                break;
+            }}
+            cont = await ret.value;
+        }}
+    }} catch (e) {{
+        console.error(e);
+        return;
+    }}
+}}
+
+await __main__();
+__rl.close();
+
+"
+    )
 }
 
 fn compile_inner(ast: SapAST) -> String {
@@ -190,20 +224,24 @@ fn compile_inner(ast: SapAST) -> String {
                 .map(|i| format!("_{}", i))
                 .collect::<Vec<String>>();
 
-            let pattern = patterns
-                .into_iter()
-                .zip(args.iter())
-                .map(|(pattern, arg)| {
-                    if let SapASTBody::Pattern(Pattern::Literal(l)) = pattern.body {
-                        let l = compile_literal(l);
-                        format!("({l} === {arg})")
-                    } else {
-                        let pattern_assign = pattern_assign(pattern, arg.clone());
-                        format!("(( ()=>{{ {pattern_assign}; return true; }} )())")
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("&&");
+            let pattern = if !patterns.is_empty() {
+                patterns
+                    .into_iter()
+                    .zip(args.iter())
+                    .map(|(pattern, arg)| {
+                        if let SapASTBody::Pattern(Pattern::Literal(l)) = pattern.body {
+                            let l = compile_literal(l);
+                            format!("({l} === {arg})")
+                        } else {
+                            let pattern_assign = pattern_assign(pattern, arg.clone());
+                            format!("(( ()=>{{ {pattern_assign}; return true; }} )())")
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join("&&")
+            } else {
+                "true".into()
+            };
 
             let args = args.join(",");
 
@@ -286,35 +324,10 @@ fn compile_inner(ast: SapAST) -> String {
         },
         crate::ast::SapASTBody::Block(vec) => {
             let block = compile_block(vec);
-
             format!(
-"
-async function __main__() {{
-    let main = (function*(){{{block}}})
-    let main_process = main();
-    try {{
-        let cont = undefined;
-        let ret = undefined;
-        while (1) {{
-            ret = main_process.next(cont)
-            if (ret.done) {{
-                break;
-            }}
-            cont = await ret.value;
-        }}
-    }} catch (e) {{
-        console.error(e);
-        return;
-    }}
-}}
-
-await __main__();
-__rl.close();
-"
+                "(__CALL__(__ENV__, (function*(){{ {} }}), undefined))",
+                block
             )
-            // format!(
-            //     "((()=>{{const _env = this.__ENV__; const __ENV__ = {{ }}; __ENV__.__proto__ = _env; {block}}})())"
-            // )
         }
         crate::ast::SapASTBody::Literal(literal) => compile_literal(literal),
         crate::ast::SapASTBody::Typeof(sap_ast) => format!("(typeof {})", compile_inner(*sap_ast)),

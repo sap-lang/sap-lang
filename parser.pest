@@ -255,7 +255,7 @@ postfix_op = _{
 implicit_params      = { "?" ~ id+ }
 guard                = { ":" ~ expr }
 tr_lambda            = { "\\" ~ pattern* ~ implicit_params? ~ guard? ~ "->" ~ expr }
-no_param_lambda_expr = { "_{" ~ expr ~ (next_stmt+ ~ expr)* ~ "}" }
+no_param_lambda_expr = { "_{" ~ next_stmt* ~ expr ~ (next_stmt+ ~ expr)* ~ next_stmt* ~ "}" }
 
 lambda_expr = { no_param_lambda_expr | tr_lambda }
 
