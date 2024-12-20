@@ -47,24 +47,22 @@ Effect = \ ty args -> {
     "type" : ty,
     "args" : args
 }
-
-
 f = _{
-    "1^2=" + (<- Effect "pow" [1,]) |> puts
-    "2^2=" + (<- Effect "pow" [2,]) |> puts
-    "3^2=" + (<- Effect "pow" [3,]) |> puts
-    "finally " + 4 |> puts
+    format "1^2={}" (<- Effect "pow" [1,]) |> puts
+    format "2^2={}" (<- Effect "pow" [2,]) |> puts
+    format "3^2={}" (<- Effect "pow" [3,]) |> puts
+    format "finally {}" 4 |> puts
 }
-
 handlers = {
     "pow" : \args resume -> {
-        "pow "+ args[0] |> puts
+        format "\npow {}" args[0] |> puts
         x = handle_eff resume (args[0] * args[0])
-        "pow "+ args[0] + " end" |> puts
+        
+        [x, format "pow {} end" args[0] |> puts]
     }
 }
 
-handle_eff = \f v -> {
+handle_eff = \f v ? handlers -> {
     ff -> next = f v
     next ? {
         (ff["__effect__"]) ? {
@@ -73,6 +71,5 @@ handle_eff = \f v -> {
     } : ff
 }
 
-v = handle_eff f ()
-
-"final v is: " + v |> puts
+backlog = handle_eff f ()
+format "final backlog is: {}" backlog |> puts

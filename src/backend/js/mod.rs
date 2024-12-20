@@ -125,13 +125,14 @@ fn compile_literal(literal: crate::parser::literal::Literal) -> String {
             "[{}]",
             vec.into_iter()
                 .map(compile_inner)
+                .map(|x| format!("__extract_return__({x})"))
                 .collect::<Vec<String>>()
                 .join(",")
         ),
         crate::parser::literal::Literal::Object(vec) => format!(
             "{{{}}}",
             vec.into_iter()
-                .map(|(k, v)| format!("{}: {}", k, compile_inner(v)))
+                .map(|(k, v)| format!("{}: __extract_return__({})", k, compile_inner(v)))
                 .collect::<Vec<String>>()
                 .join(",")
         ),
@@ -361,7 +362,9 @@ fn compile_inner(ast: SapAST) -> String {
             let cond = compile_inner(*cond);
             let then = compile_inner(*then);
             let else_ = compile_inner(*else_);
-            format!("((()=>{{if (__extract_return__({cond})) {{return {then}}} else {{return {else_}}}}})())")
+            format!(
+                "((()=>{{if (__extract_return__({cond})) {{return {then}}} else {{return {else_}}}}})())"
+            )
         }
 
         crate::ast::SapASTBody::Not(sap_ast) => {
