@@ -399,6 +399,7 @@ function __return_value__(value, next) {
 }
 
 function __call__(env, f, ...args) {
+    f = __extract_return__(f);
     args = args.map(__extract_return__);
     if (typeof f === 'function') {
         const generator = f(env, ...args);

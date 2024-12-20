@@ -1,18 +1,3 @@
-
-Effect = \ ty args -> {
-    "__effect__" : true,
-    "type" : ty,
-    "args" : args
-}
-
-
-f = _{
-    "1^2=" + (<- Effect "pow" [1,]) |> puts
-    "2^2=" + (<- Effect "pow" [2,]) |> puts
-    "3^2=" + (<- Effect "pow" [3,]) |> puts
-    "finally " + 4 |> puts
-}
-
 // to_end = \f v -> {
 //     ff -> next = f v
 //     next ? {
@@ -57,6 +42,20 @@ f = _{
 // to_end f ()
 
 
+Effect = \ ty args -> {
+    "__effect__" : true,
+    "type" : ty,
+    "args" : args
+}
+
+
+f = _{
+    "1^2=" + (<- Effect "pow" [1,]) |> puts
+    "2^2=" + (<- Effect "pow" [2,]) |> puts
+    "3^2=" + (<- Effect "pow" [3,]) |> puts
+    "finally " + 4 |> puts
+}
+
 handlers = {
     "pow" : \args resume -> {
         "pow "+ args[0] |> puts
@@ -69,15 +68,11 @@ handle_eff = \f v -> {
     ff -> next = f v
     next ? {
         (ff["__effect__"]) ? {
-            ty = ff["type"]
-            handler = handlers[ty]
-            handler ff["args"] next
-        }:{ff}
-    } : {
-        ff
-    }
+            handlers[ff["type"]] ff["args"] next
+        } : ff
+    } : ff
 }
 
 v = handle_eff f ()
 
-puts v
+"final v is: " + v |> puts
