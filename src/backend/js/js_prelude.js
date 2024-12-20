@@ -20,7 +20,7 @@ const __ENV__ = {
                 }
             },
             function* (__PENV__, a, b) {
-                return a + b
+                return a + JSON.stringify(b,null,2)
             }
         ]
     },
@@ -134,6 +134,10 @@ const __ENV__ = {
                 } else {
                     throw new Error('guard failed');
                 }
+            },
+
+            function* (__PENV__, a, b) {
+                return a == undefined || b == undefined ? false : a && b
             }
         ]
     },
@@ -244,7 +248,15 @@ const __ENV__ = {
                 } else {
                     throw new Error('guard failed');
                 }
-            }
+            },
+
+            function* (__PENV__, a, b) {
+                if (typeof a === 'object' && typeof b === 'string') {
+                    return a[b]
+                } else {
+                    throw new Error('guard failed');
+                }
+            },
         ]
     },
     "(slice)": {
@@ -406,7 +418,7 @@ function __call__(env, f, ...args) {
                 }
             }
         }
-        throw new Error('no matching pattern');
+        throw new Error(`no matching pattern ${f["slot"]} for arguments ${JSON.stringify(args)}`);
     } else if (typeof f === 'object' && f['next'] && f['return']) {
         // f is a generator
         let { value, done } = f.next(...args);

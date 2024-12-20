@@ -325,7 +325,7 @@ fn compile_inner(ast: SapAST) -> String {
         crate::ast::SapASTBody::Block(vec) => {
             let block = compile_block(vec);
             format!(
-                "(__CALL__(__ENV__, (function*(){{ {} }}), undefined))",
+                "(__call__(__ENV__, (function*(){{ {} }}), undefined))",
                 block
             )
         }
@@ -361,7 +361,7 @@ fn compile_inner(ast: SapAST) -> String {
             let cond = compile_inner(*cond);
             let then = compile_inner(*then);
             let else_ = compile_inner(*else_);
-            format!("((()=>{{if ({cond}) {{return {then}}} else {{return {else_}}}}})())")
+            format!("((()=>{{if (__extract_return__({cond})) {{return {then}}} else {{return {else_}}}}})())")
         }
 
         crate::ast::SapASTBody::Not(sap_ast) => {

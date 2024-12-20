@@ -46,7 +46,8 @@ fn parse_slot(pair: pest::iterators::Pair<Rule>) -> Literal {
 
 fn parse_literal_child(pair: pest::iterators::Pair<Rule>) -> Result<Literal, SapParserError> {
     Ok(match pair.as_rule() {
-        Rule::boolean => parse_boolean(pair),
+        Rule::boolean_true => parse_boolean(pair),
+        Rule::boolean_false => parse_boolean(pair),
         Rule::null => parse_null(pair),
         Rule::undefined => parse_undefined(pair),
         Rule::void => parse_void(pair),
