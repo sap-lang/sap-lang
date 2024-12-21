@@ -10,7 +10,7 @@ use super::{Rule, expr::parse_expr, literal::parse_literal, pattern::parse_patte
 pub mod id;
 pub mod lambda_expr;
 
-fn parse_op_expr_child(pair: Pair<Rule>) -> Result<SapAST, SapParserError> {
+pub fn parse_op_expr_child(pair: Pair<Rule>) -> Result<SapAST, SapParserError> {
     let span = SapDiagnosticSpan::from_pest_span(&pair.as_span());
     match pair.as_rule() {
         Rule::id => id::parse_id(pair),

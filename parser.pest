@@ -161,7 +161,7 @@ array_literal =  {
 }
 
 // ----- object literal -----
-object_elem_kv =  { expr ~ ":" ~ NEWLINE* ~ expr }
+object_elem_kv =  { expr ~ ":" ~ NEWLINE* ~ expr | id | literal }
 object_body    = _{ object_elem_kv ~ ("," ~ NEWLINE* ~ object_elem_kv)* }
 object_literal =  {
     "{" ~ NEWLINE* ~ object_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}"
@@ -195,7 +195,7 @@ array_pattern_elem =  { pattern | eclipse_pattern }
 array_pattern_body = _{ array_pattern_elem ~ ("," ~ NEWLINE* ~ array_pattern_elem)* }
 array_pattern      =  { "[" ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
 
-object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | eclipse_pattern }
+object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | id | eclipse_pattern }
 object_pattern_body = _{ object_pattern_elem ~ ("," ~ NEWLINE* ~ object_pattern_elem)* }
 object_pattern      =  { "{" ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
 

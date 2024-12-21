@@ -2,7 +2,13 @@ use pest::iterators::Pair;
 
 use crate::{
     error_diag::{SapDiagnosticSpan, SapParserError, SapParserErrorCode},
-    parser::{Rule, expr::parse_expr, pratt_parser, primary::id::Id},
+    parser::{
+        Rule,
+        expr::parse_expr,
+        literal::string::StringLiteral,
+        pratt_parser,
+        primary::{id::Id, parse_op_expr_child},
+    },
 };
 
 use super::Literal;
@@ -18,16 +24,15 @@ pub fn parse_object(object_literal: Pair<Rule>) -> Result<Literal, SapParserErro
             code: SapParserErrorCode::InvalidKVPair,
             message: "Expected key-value pair".to_string(),
         })?;
-        let v = kv.next().ok_or(SapParserError {
-            span,
-            code: SapParserErrorCode::InvalidKVPair,
-            message: "Expected key-value pair".to_string(),
-        })?;
-
-        let key = parse_expr(k.into_inner(), pratt_parser())?;
+        let v = kv.next();
+        let key = parse_op_expr_child(k)?;
+        let mut is_key_id = false;
         let key = match key.body {
             // id
-            crate::ast::SapASTBody::Id(Id(id)) => id,
+            crate::ast::SapASTBody::Id(Id(id)) => {
+                is_key_id = true;
+                id
+            }
             // literal string
             crate::ast::SapASTBody::Literal(literal) => match literal {
                 Literal::String(s) => s.to_string(),
@@ -35,8 +40,23 @@ pub fn parse_object(object_literal: Pair<Rule>) -> Result<Literal, SapParserErro
             },
             _ => unreachable!("Expected id or string, found {:?}", key),
         };
-        let value = parse_expr(v.into_inner(), pratt_parser())?;
-        elems.push((key, value));
+
+        if let Some(v) = v {
+            let value = parse_expr(v.into_inner(), pratt_parser())?;
+            elems.push((key, value));
+        } else if is_key_id {
+            elems.push((key.clone(), crate::ast::SapAST {
+                span: span.clone(),
+                body: crate::ast::SapASTBody::Id(Id(key)),
+            }));
+        } else {
+            elems.push((key.clone(), crate::ast::SapAST {
+                span: span.clone(),
+                body: crate::ast::SapASTBody::Literal(Literal::String(StringLiteral::SingleLine(
+                    key,
+                ))),
+            }))
+        }
     }
     Ok(super::Literal::Object(elems))
 }

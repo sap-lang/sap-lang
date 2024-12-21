@@ -9,7 +9,7 @@ pub mod parser;
 pub mod backend;
 
 fn main() {
-    let source = include_str!("../examples/effects.sap");
+    let source = include_str!("../examples/object.sap");
     let ast = parser::parse(source);
     let mut file = std::fs::File::create("test.js").unwrap();
     let code = backend::js::compile(ast);

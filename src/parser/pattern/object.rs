@@ -12,8 +12,9 @@ use crate::{
 };
 
 use super::Pattern;
-pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<Pattern, SapParserError> {
+pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<SapAST, SapParserError> {
     assert_eq!(object_literal.as_rule(), Rule::object_pattern);
+    let span = SapDiagnosticSpan::from_pest_span(&object_literal.as_span());
     let mut elems = vec![];
     for elem in object_literal.into_inner() {
         let span = SapDiagnosticSpan::from_pest_span(&elem.as_span());
@@ -27,6 +28,14 @@ pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<Pattern, SapPa
 
         if let Rule::eclipse_pattern = k.as_rule() {
             elems.push(ObjectInner::Eclipse(parse_eclipse_pattern(k)?));
+            continue;
+        } else if let Rule::id = k.as_rule() {
+            let k = parse_id(k)?;
+            let v = SapAST {
+                span: k.span.clone(),
+                body: SapASTBody::Pattern(super::Pattern::Id(k.clone().get_id())),
+            };
+            elems.push(ObjectInner::KV(k, v));
             continue;
         }
 
@@ -57,7 +66,10 @@ pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<Pattern, SapPa
         let value = parse_pattern(v)?;
         elems.push(ObjectInner::KV(key, value));
     }
-    Ok(super::Pattern::Object(elems))
+    Ok(SapAST {
+        span,
+        body: SapASTBody::Pattern(Pattern::Object(elems)),
+    })
 }
 
 #[cfg(test)]

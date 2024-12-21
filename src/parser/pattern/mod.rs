@@ -2,6 +2,7 @@ pub mod array;
 pub mod object;
 
 use array::parse_array_pattern;
+use object::parse_object_pattern;
 use pest::iterators::Pair;
 
 use crate::{
@@ -31,10 +32,7 @@ fn parse_pattern_child(pattern: Pair<Rule>) -> Result<SapAST, SapParserError> {
             body: SapASTBody::Pattern(Pattern::Id(id.get_id())),
         }),
         Rule::array_pattern => parse_array_pattern(pattern),
-        // Rule::object_pattern => {
-        //     // 解析 object_pattern 的逻辑
-        //     // ...
-        // }
+        Rule::object_pattern => parse_object_pattern(pattern),
         Rule::literal => parse_literal(pattern).map(|literal| SapAST {
             span,
             body: SapASTBody::Pattern(Pattern::Literal(literal)),

@@ -306,12 +306,19 @@ fn compile_inner(ast: SapAST) -> String {
                     vec.into_iter()
                         .map(|oi| {
                             match oi {
-                                ObjectInner::KV(k, v) => {
-                                    format!("{}: {}", compile_inner(k), compile_inner(v))
+                                ObjectInner::KV(
+                                    SapAST {
+                                        body: SapASTBody::Id(k),
+                                        ..
+                                    },
+                                    v,
+                                ) => {
+                                    format!("{}: {}", k.0, compile_inner(v))
                                 }
                                 ObjectInner::Eclipse(EclipsePattern(id)) => {
                                     format!("...{}", id.0)
                                 }
+                                _ => unimplemented!("Invalid object inner {:?}", oi),
                             }
                         })
                         .collect::<Vec<String>>()
