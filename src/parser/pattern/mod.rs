@@ -4,6 +4,7 @@ pub mod object;
 use array::parse_array_pattern;
 use object::parse_object_pattern;
 use pest::iterators::Pair;
+use serde::Serialize;
 
 use crate::{
     ast::{SapAST, SapASTBody},
@@ -49,16 +50,16 @@ pub fn parse_eclipse_pattern(pattern: Pair<Rule>) -> Result<EclipsePattern, SapP
     parse_id(id).map(|id| EclipsePattern(id.get_id()))
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct EclipsePattern(pub Id);
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum ObjectInner {
     KV(SapAST, SapAST),
     Eclipse(EclipsePattern),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Pattern {
     Id(Id),
     Eclipse(EclipsePattern),

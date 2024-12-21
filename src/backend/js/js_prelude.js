@@ -279,6 +279,8 @@ const __ENV__ = {
     "format": function* (__PENV__, template, ...args) {
         if (typeof template === 'string') {
             let i = 0;
+            template = template.replace(/{{/g, "__LEFT_BRACE__");
+            template = template.replace(/}}/g, "__RIGHT_BRACE__");
             template = template.replace(/{}/g, () => args[i++]);
             template = template.replace(/{\?}/g, () => JSON.stringify(args[i++]));
             template = template.replace(/{#\?}/g, () => JSON.stringify(args[i++],null,2));
@@ -286,11 +288,37 @@ const __ENV__ = {
                 const index = parseInt(match.slice(1, -1));
                 return args[index];
             });
+            template = template.replace(/__LEFT_BRACE__/g, "{");
+            template = template.replace(/__RIGHT_BRACE__/g, "}");
             return template;
         } else {
             throw new Error('guard failed');
         }
     },
+
+    "join": function* (__PENV__, sep, arr) {
+        if (typeof sep === 'string' && Array.isArray(arr)) {
+            return arr.join(sep);
+        } else {
+            throw new Error('guard failed');
+        }
+    },
+
+    "map": function* (__PENV__, f, arr) {
+        if (Array.isArray(arr)) {
+            return arr.map((x) => __extract_return__(__call__(__PENV__, f, x)));
+        }
+    },
+
+    "flatten": function* (__PENV__, arr) {
+        if (Array.isArray(arr)) {
+            return arr.flat();
+        } else {
+            throw new Error('guard failed');
+        }
+    },
+
+
 
     "puts": function* (__PENV__, a) {
         if (__is_return__(a)) {

@@ -1,4 +1,4 @@
-use num_bigint::BigInt;
+use serde::Serialize;
 
 use crate::parser::Rule;
 
@@ -116,11 +116,11 @@ pub fn parse_number(pair: pest::iterators::Pair<Rule>) -> Number {
         _ => unreachable!(),
     }
 }
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Number {
     Int(i64),
     Float(f64),
-    BigInt(BigInt),
+    // BigInt(BigInt),
 }
 
 impl Number {

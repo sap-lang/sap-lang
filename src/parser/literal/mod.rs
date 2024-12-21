@@ -1,4 +1,5 @@
 use number::Number;
+use serde::Serialize;
 use string::StringLiteral;
 
 use crate::{ast::SapAST, error_diag::SapParserError, parser::Rule};
@@ -71,7 +72,7 @@ pub fn parse_literal(pair: pest::iterators::Pair<Rule>) -> Result<Literal, SapPa
     )
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Literal {
     Null,
     Undefined,

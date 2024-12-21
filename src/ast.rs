@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     error_diag::{SapDiagnosticSpan, SapParserError},
     parser::{
@@ -7,7 +9,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum SapASTBody {
     Error(SapParserError),
     Id(Id),
@@ -107,7 +109,7 @@ pub enum SapASTBody {
     ),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct SapAST {
     pub span: SapDiagnosticSpan,
     pub body: SapASTBody,

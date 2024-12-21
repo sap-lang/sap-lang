@@ -2,6 +2,7 @@
 use crate::{
     ast::{SapAST, SapASTBody},
     parser::{
+        literal::{Literal, number::Number, string::StringLiteral},
         pattern::{EclipsePattern, ObjectInner, Pattern},
         primary::lambda_expr::LambdaExpr,
     },
@@ -98,30 +99,30 @@ fn pattern_assign_get_cont(pattern: SapAST, cid: String, value: String) -> Strin
     }
 }
 
-fn compile_literal(literal: crate::parser::literal::Literal) -> String {
+fn compile_literal(literal: Literal) -> String {
     match literal {
-        crate::parser::literal::Literal::Null => "null".into(),
-        crate::parser::literal::Literal::Undefined => "undefined".into(),
-        crate::parser::literal::Literal::Void => "undefined".into(),
-        crate::parser::literal::Literal::Slot => "{slot: []}".into(),
-        crate::parser::literal::Literal::Boolean(b) => b.to_string(),
-        crate::parser::literal::Literal::Number(number) => match number {
-            crate::parser::literal::number::Number::Int(i) => i.to_string(),
-            crate::parser::literal::number::Number::Float(f) => f.to_string(),
-            crate::parser::literal::number::Number::BigInt(_big_int) => unimplemented!(),
+        Literal::Null => "null".into(),
+        Literal::Undefined => "undefined".into(),
+        Literal::Void => "undefined".into(),
+        Literal::Slot => "{slot: []}".into(),
+        Literal::Boolean(b) => b.to_string(),
+        Literal::Number(number) => match number {
+            Number::Int(i) => i.to_string(),
+            Number::Float(f) => f.to_string(),
+            // Number::BigInt(_big_int) => unimplemented!(),
         },
-        crate::parser::literal::Literal::String(string_literal) => match string_literal {
-            crate::parser::literal::string::StringLiteral::SingleLine(s) => {
+        Literal::String(string_literal) => match string_literal {
+            StringLiteral::SingleLine(s) => {
                 format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
             }
-            crate::parser::literal::string::StringLiteral::MultiLine(s) => {
+            StringLiteral::MultiLine(s) => {
                 format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
             }
-            crate::parser::literal::string::StringLiteral::Raw(s) => {
+            StringLiteral::Raw(s) => {
                 format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
             }
         },
-        crate::parser::literal::Literal::Array(vec) => format!(
+        Literal::Array(vec) => format!(
             "[{}]",
             vec.into_iter()
                 .map(compile_inner)
@@ -129,7 +130,7 @@ fn compile_literal(literal: crate::parser::literal::Literal) -> String {
                 .collect::<Vec<String>>()
                 .join(",")
         ),
-        crate::parser::literal::Literal::Object(vec) => format!(
+        Literal::Object(vec) => format!(
             "{{{}}}",
             vec.into_iter()
                 .map(|(k, v)| format!("{}: __extract_return__({})", k, compile_inner(v)))
@@ -143,7 +144,7 @@ fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
     match pattern {
         Pattern::Id(id) => vec![id.0.clone()],
         Pattern::Array(vec) => vec
-            .into_iter()
+            .iter()
             .map(|x| {
                 if let SapASTBody::Pattern(p) = &x.body {
                     p

@@ -1,4 +1,5 @@
 use pest::iterators::Pair;
+use serde::Serialize;
 
 use crate::{
     ast::{SapAST, SapASTBody},
@@ -108,7 +109,7 @@ pub fn parse_lambda_expr(lambda_expr: Pair<Rule>) -> Result<SapAST, SapParserErr
     parse_lambda_expr_child(lambda_expr)
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct LambdaExpr {
     pub patterns: Vec<SapAST>,
     pub implicit_params: Option<Vec<SapAST>>,

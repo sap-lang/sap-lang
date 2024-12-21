@@ -1,4 +1,5 @@
 use pest::iterators::Pair;
+use serde::Serialize;
 
 use crate::{
     ast::{SapAST, SapASTBody},
@@ -28,7 +29,7 @@ pub fn parse_id(id: Pair<Rule>) -> Result<SapAST, SapParserError> {
     parse_id_child(id)
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Id(pub String);
 
 #[cfg(test)]

@@ -1,7 +1,8 @@
 use pest::Span;
+use serde::Serialize;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum SapParserErrorCode {
     NOP = 0,
 
@@ -15,7 +16,7 @@ pub enum SapParserErrorCode {
     PatternShouldNotBeOperand,
 }
 
-#[derive(Error, Debug, PartialEq, Clone)]
+#[derive(Error, Debug, PartialEq, Clone, Serialize)]
 pub struct SapParserError {
     pub span: SapDiagnosticSpan,
     pub code: SapParserErrorCode,
@@ -28,7 +29,7 @@ impl std::fmt::Display for SapParserError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SapDiagnosticSpan {
     pub start_line: usize,
     pub start_col: usize,

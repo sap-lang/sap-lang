@@ -1,6 +1,7 @@
 use crate::parser::Rule;
 use pest::iterators::{Pair, Pairs};
 use regex::{Captures, Regex};
+use serde::Serialize;
 
 fn handle_special_escape(str: String) -> String {
     // hex 8 digit
@@ -120,7 +121,7 @@ pub fn parse_string(str: Pair<Rule>) -> StringLiteral {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum StringLiteral {
     SingleLine(String),
     MultiLine(String),
