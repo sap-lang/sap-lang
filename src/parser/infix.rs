@@ -42,7 +42,8 @@ pub fn parse_infix(
         rhs
     };
 
-    let lhs = if pair.as_rule() == Rule::infix_assign {
+    let lhs = if pair.as_rule() == Rule::infix_assign || pair.as_rule() == Rule::infix_match_equals
+    {
         match lhs.body {
             SapASTBody::Id(id) => SapAST {
                 span: lhs.span.clone(),
@@ -182,6 +183,11 @@ pub fn parse_infix(
         Rule::infix_assign => Ok(SapAST {
             span: span.clone(),
             body: SapASTBody::Assign(Box::new(lhs), Box::new(rhs)),
+        }),
+
+        Rule::infix_match_equals => Ok(SapAST {
+            span: span.clone(),
+            body: SapASTBody::MatchEquals(Box::new(lhs), Box::new(rhs)),
         }),
 
         Rule::infix_assign_slot => Ok(SapAST {

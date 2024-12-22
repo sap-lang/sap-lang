@@ -60,6 +60,56 @@ fn pattern_assign(pattern: SapAST, value: String) -> String {
     }
 }
 
+fn pattern_match_assign(pattern: SapAST, value: String) -> String {
+    if let pattern @ SapAST {
+        span: _,
+        body: SapASTBody::Pattern(p),
+    } = &pattern
+    {
+        // sap_ast is a pattern
+        let ids = find_all_ids_in_pattern(p);
+
+        let exprs = if let Pattern::Literal(literal) = p {
+            let literal = compile_literal(literal.clone());
+            format!(
+                "{literal} === {value} ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+            )
+        } else {
+            let pattern = compile_inner(pattern.clone());
+            "{".to_string()
+                + &format!("let {pattern} = {value};")
+                + &ids
+                    .iter()
+                    .map(|id| format!("__new_binding__(__ENV__, '{id}', {id})"))
+                    .collect::<Vec<String>>()
+                    .join(";")
+                + ";"
+                + &ids
+                    .iter()
+                    .map(|id| {
+                        format!("if({id}){{}} else {{throw new Error('{id} is not destructed')}}")
+                    })
+                    .collect::<Vec<String>>()
+                    .join(";")
+                + "}"
+        };
+
+        format!("((()=>{{ try {{{exprs}; return true}} catch (e) {{return false}} }})())")
+    } else if let SapAST {
+        span,
+        body: SapASTBody::Id(i),
+    } = pattern
+    {
+        let pattern_ast = SapAST {
+            span,
+            body: SapASTBody::Pattern(Pattern::Id(i.clone())),
+        };
+        pattern_match_assign(pattern_ast, value)
+    } else {
+        unreachable!("Expected pattern, got {:?}", pattern)
+    }
+}
+
 fn pattern_assign_get_cont(pattern: SapAST, cid: String, value: String) -> String {
     if let pattern @ SapAST {
         span: _,
@@ -348,6 +398,9 @@ fn compile_inner(ast: SapAST) -> String {
 
         crate::ast::SapASTBody::Assign(pattern, sap_ast1) => {
             pattern_assign(*pattern, compile_inner(*sap_ast1))
+        }
+        crate::ast::SapASTBody::MatchEquals(pattern, sap_ast1) => {
+            pattern_match_assign(*pattern, compile_inner(*sap_ast1))
         }
         crate::ast::SapASTBody::AssignGetCont(sap_ast, sap_ast1, sap_ast2) => {
             if let SapASTBody::Id(id) = sap_ast1.body {

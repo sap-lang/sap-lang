@@ -35,6 +35,13 @@ pub enum SapASTBody {
         // expr
         Box<SapAST>,
     ),
+    // assign but return value is boolean
+    MatchEquals(
+        // pattern
+        Box<SapAST>,
+        // expr
+        Box<SapAST>,
+    ),
     AssignGetCont(
         // pattern
         Box<SapAST>,

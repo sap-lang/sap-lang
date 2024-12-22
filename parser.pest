@@ -9,9 +9,8 @@ multiline_comment       = _{
 multiline_comment_inner = @{
     (!(PEEK ~ "/") ~ ANY)*
 }
-COMMENT   = _{ single_line_comment | multiline_comment }
-next_stmt = _{ ";" | NEWLINE+ }
-
+COMMENT                 = _{ single_line_comment | multiline_comment }
+next_stmt               = _{ ";" | NEWLINE+ }
 
 start    = @{ XID_START | EMOJI_PRESENTATION }
 continue = @{ XID_CONTINUE | EMOJI_PRESENTATION }
@@ -19,35 +18,36 @@ continue = @{ XID_CONTINUE | EMOJI_PRESENTATION }
 normal_id = @{ start ~ continue* | "_" ~ continue+ }
 id        =  { normal_id | magic_fn_id }
 
-prefix_typeof  = @{ "$" }
-prefix_not     = @{ "!" }
-prefix_neg     = @{ "-" }
-prefix_yield   = @{ "<-" }
-prefix_yield_child   = @{ "<<-" }
-prefix_bit_not = @{ "~" }
+prefix_typeof      = @{ "$" }
+prefix_not         = @{ "!" }
+prefix_neg         = @{ "-" }
+prefix_yield       = @{ "<-" }
+prefix_yield_child = @{ "<<-" }
+prefix_bit_not     = @{ "~" }
 
-infix_add             = @{ "+" }
-infix_sub             = @{ "-" }
-infix_mul             = @{ "*" }
-infix_div             = @{ "/" }
-infix_mod             = @{ "%" }
-infix_eq              = @{ "==" }
-infix_neq             = @{ "!=" }
-infix_le              = @{ "<=" }
-infix_ge              = @{ ">=" }
-infix_lt              = @{ "<" }
-infix_gt              = @{ ">" }
-infix_and             = @{ "&&" }
-infix_or              = @{ "||" }
-infix_bit_or          = @{ "|" }
-infix_bit_and         = @{ "&" }
-infix_bit_xor         = @{ "^" }
-infix_bit_shift_l     = @{ "<<" }
-infix_bit_shift_r     = @{ ">>" }
-infix_extends         = @{ "<:" }
-infix_function        = ${ "~" ~ id ~ "~" }
+infix_add         = @{ "+" }
+infix_sub         = @{ "-" }
+infix_mul         = @{ "*" }
+infix_div         = @{ "/" }
+infix_mod         = @{ "%" }
+infix_eq          = @{ "==" }
+infix_neq         = @{ "!=" }
+infix_le          = @{ "<=" }
+infix_ge          = @{ ">=" }
+infix_lt          = @{ "<" }
+infix_gt          = @{ ">" }
+infix_and         = @{ "&&" }
+infix_or          = @{ "||" }
+infix_bit_or      = @{ "|" }
+infix_bit_and     = @{ "&" }
+infix_bit_xor     = @{ "^" }
+infix_bit_shift_l = @{ "<<" }
+infix_bit_shift_r = @{ ">>" }
+infix_extends     = @{ "<:" }
+infix_function    = ${ "~" ~ id ~ "~" }
 // this is a syntax sugar for function application
 infix_assign          = @{ "=" }
+infix_match_equals    = @{ "?=" }
 infix_assign_slot     = @{ "::=" }
 infix_assign_get_cont =  { "->" ~ id ~ "=" }
 infix_pipe            = @{ "|>" }
@@ -76,7 +76,7 @@ magic_fn_id = @{
   | "(>>)"
   | "(!)"
   | "(~)"
-  | "([])"  
+  | "([])"
   | "(neg)"
   | "(bang)"
 }
@@ -193,11 +193,11 @@ eclipse_pattern = ${ "..." ~ id }
 
 array_pattern_elem =  { pattern | eclipse_pattern }
 array_pattern_body = _{ array_pattern_elem ~ ("," ~ NEWLINE* ~ array_pattern_elem)* }
-array_pattern      =  { "[" ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
+array_pattern      =  { ("^[" | "[") ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
 
 object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | id | eclipse_pattern }
 object_pattern_body = _{ object_pattern_elem ~ ("," ~ NEWLINE* ~ object_pattern_elem)* }
-object_pattern      =  { "{" ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
+object_pattern      =  { ("^{" | "{") ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
 
 pattern = {
     array_pattern
@@ -241,6 +241,7 @@ infix_op = _{
   | infix_bit_shift_r
   | infix_function
   | infix_assign
+  | infix_match_equals
   | infix_assign_slot
 }
 

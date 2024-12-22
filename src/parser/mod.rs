@@ -29,7 +29,8 @@ pub fn pratt_parser() -> &'static PrattParser<Rule> {
             // level 17 _ = _, _ ::= _, _ -> _ = _
             .op(Op::infix(Rule::infix_assign, Assoc::Right)
                 | Op::infix(Rule::infix_assign_get_cont, Assoc::Right)
-                | Op::infix(Rule::infix_assign_slot, Assoc::Right))
+                | Op::infix(Rule::infix_assign_slot, Assoc::Right)
+                | Op::infix(Rule::infix_match_equals, Assoc::Right))
             // lelve 16 _ |> _
             .op(Op::infix(Rule::infix_pipe, Assoc::Left))
             // level 15 _ ~id~ _
