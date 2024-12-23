@@ -29,42 +29,36 @@ pub fn parse_object_pattern(object_literal: Pair<Rule>) -> Result<SapAST, SapPar
         if let Rule::eclipse_pattern = k.as_rule() {
             elems.push(ObjectInner::Eclipse(parse_eclipse_pattern(k)?));
             continue;
-        } else if let Rule::id = k.as_rule() {
-            let k = parse_id(k)?;
-            let v = SapAST {
-                span: k.span.clone(),
-                body: SapASTBody::Pattern(super::Pattern::Id(k.clone().get_id())),
+        } else {
+            // let k = parse_id(k)?;
+            let v = kv.next().ok_or(SapParserError {
+                span,
+                code: SapParserErrorCode::InvalidKVPair,
+                message: "Expected key-value pair".to_string(),
+            })?;
+
+            let k_span = SapDiagnosticSpan::from_pest_span(&k.as_span());
+            let key = match k.as_rule() {
+                Rule::id => parse_id(k).map(|id| SapAST {
+                    span: k_span.clone(),
+                    body: SapASTBody::Id(id.get_id()),
+                })?,
+                Rule::normal_string_inner
+                | Rule::raw_string_inner
+                | Rule::multiline_string_inner => {
+                    let inner_string = parse_string(k).to_string();
+                    SapAST {
+                        span: k_span.clone(),
+                        body: SapASTBody::Id(crate::parser::primary::id::Id(inner_string)),
+                    }
+                }
+                _ => unreachable!("Invalid key rule: {:?}", k),
             };
-            elems.push(ObjectInner::KV(k, v));
+
+            let value = parse_pattern(v)?;
+            elems.push(ObjectInner::KV(key, value));
             continue;
         }
-
-        let v = kv.next().ok_or(SapParserError {
-            span,
-            code: SapParserErrorCode::InvalidKVPair,
-            message: "Expected key-value pair".to_string(),
-        })?;
-
-        let k_span = SapDiagnosticSpan::from_pest_span(&k.as_span());
-        let key = match k.as_rule() {
-            Rule::id => parse_id(k).map(|id| SapAST {
-                span: k_span.clone(),
-                body: SapASTBody::Pattern(super::Pattern::Id(id.get_id())),
-            })?,
-            Rule::normal_string_inner | Rule::raw_string_inner | Rule::multiline_string_inner => {
-                let inner_string = parse_string(k).to_string();
-                SapAST {
-                    span: k_span.clone(),
-                    body: SapASTBody::Pattern(super::Pattern::Id(crate::parser::primary::id::Id(
-                        inner_string,
-                    ))),
-                }
-            }
-            _ => unreachable!("Invalid key rule: {:?}", k),
-        };
-
-        let value = parse_pattern(v)?;
-        elems.push(ObjectInner::KV(key, value));
     }
     Ok(SapAST {
         span,

@@ -34,17 +34,17 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
         body: SapASTBody::Pattern(p),
     } = &pattern
     {
-        // sap_ast is a pattern
-        let ids = find_all_ids_in_pattern(p);
+        let mut i = 0;
+        let (p, map) = replace_all_literal_in_pattern(p, &mut i);
 
-        if let Pattern::Literal(literal) = p {
-            let literal = compile_literal(literal.clone());
-            format!(
-                "__equals__({literal},{value}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
-            )
-        } else {
-            let pattern = compile_inner(pattern.clone());
-            "{".to_string()
+        let ids = find_all_ids_in_pattern(&p);
+
+        let pattern = compile_inner(SapAST {
+            span: pattern.span.clone(),
+            body: SapASTBody::Pattern(p),
+        });
+
+        "{".to_string()
                 + &format!("let {pattern} = {value};")
                 + &ids
                     .iter()
@@ -58,6 +58,7 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
                     })
                     .collect::<Vec<String>>()
                     .join(";")
+                + ";" 
                 + &match mode {
                     PatternAssignMode::Assign => String::new(),
                     PatternAssignMode::Match => ids
@@ -71,8 +72,14 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
                         .join(";"),
                     PatternAssignMode::AssignGetCont(_) => String::new(),
                 }
-                + "}"
-        }
+                + ";" +
+
+                    &map.into_iter().map(|(k, v) | {
+                        let literal = compile_literal(v);
+                        format!(
+                            "__equals__(_l_{k},{literal}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+                        )
+                    }).collect::<Vec<String>>().join(";") + "}"
     } else if let SapAST {
         span,
         body: SapASTBody::Id(i),
@@ -92,7 +99,7 @@ fn compile_literal(literal: Literal) -> String {
     match literal {
         Literal::Null => "null".into(),
         Literal::Undefined => "undefined".into(),
-        Literal::Void => "undefined".into(),
+        Literal::Void => "{__void__:true}".into(),
         Literal::Slot => "{slot: []}".into(),
         Literal::Boolean(b) => b.to_string(),
         Literal::Number(number) => match number {
@@ -126,6 +133,67 @@ fn compile_literal(literal: Literal) -> String {
                 .collect::<Vec<String>>()
                 .join(",")
         ),
+    }
+}
+
+fn replace_all_literal_in_pattern(
+    pattern: &Pattern,
+    i: &mut i32,
+) -> (Pattern, HashMap<i32, Literal>) {
+    let mut map = HashMap::new();
+    match pattern {
+        Pattern::Id(_) => (pattern.clone(), map),
+        Pattern::Literal(l) => {
+            let ii = *i;
+            map.insert(ii, l.clone());
+            *i += 1;
+            (
+                Pattern::Id(crate::parser::primary::id::Id(format!("_l_{ii}"))),
+                map,
+            )
+        }
+        Pattern::Array(vec) => {
+            let mut new_vec = vec![];
+            for x in vec {
+                if let SapASTBody::Pattern(p) = &x.body {
+                    let (new_x, new_map) = replace_all_literal_in_pattern(p, i);
+                    new_vec.push(SapAST {
+                        span: x.span.clone(),
+                        body: SapASTBody::Pattern(new_x),
+                    });
+                    map.extend(new_map);
+                } else {
+                    unreachable!()
+                }
+            }
+            (Pattern::Array(new_vec), map)
+        }
+        Pattern::Eclipse(_) => (pattern.clone(), map),
+        Pattern::Object(vec) => {
+            let mut new_vec = vec![];
+            for object_inner in vec {
+                match object_inner {
+                    ObjectInner::KV(k, v) => {
+                        let vs = v.span.clone();
+                        let v = if let SapASTBody::Pattern(p) = &v.body {
+                            p
+                        } else {
+                            unreachable!()
+                        };
+                        let (new_v, new_map) = replace_all_literal_in_pattern(v, i);
+                        new_vec.push(ObjectInner::KV(k.clone(), SapAST {
+                            span: vs,
+                            body: SapASTBody::Pattern(new_v),
+                        }));
+                        map.extend(new_map);
+                    }
+                    ObjectInner::Eclipse(_) => {
+                        new_vec.push(object_inner.clone());
+                    }
+                }
+            }
+            (Pattern::Object(new_vec), map)
+        }
     }
 }
 
@@ -220,14 +288,10 @@ fn compile_inner(ast: SapAST) -> String {
                     .into_iter()
                     .zip(args.iter())
                     .map(|(pattern, arg)| {
-                        if let SapASTBody::Pattern(Pattern::Literal(l)) = pattern.body {
-                            let l = compile_literal(l);
-                            format!("(__equals__({l},{arg}))")
-                        } else {
-                            let pattern_assign =
-                                pattern_assign(pattern, arg.clone(), PatternAssignMode::Assign);
-                            format!("(( ()=>{{ {pattern_assign}; return true; }} )())")
-                        }
+                        format!(
+                            "((()=>{{{}; return true}})())",
+                            pattern_assign(pattern, arg.clone(), PatternAssignMode::Match)
+                        )
                     })
                     .collect::<Vec<String>>()
                     .join("&&")
@@ -273,9 +337,8 @@ fn compile_inner(ast: SapAST) -> String {
             format!(
                 "
 (function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __PENV__;
-        if (__extract_return__({pattern})) {{
+        {pattern}
         {body}
-        }} else {{throw new Error('pattern matching failed');}}
 }})
 "
             )
@@ -324,7 +387,7 @@ fn compile_inner(ast: SapAST) -> String {
         crate::ast::SapASTBody::Block(vec) => {
             let block = compile_block(vec);
             format!(
-                "(__call__(__ENV__, (function*(){{ {} }}), undefined))",
+                "(__call__(__ENV__, (function*(){{ {} }}), {{__void__:true}}))",
                 block
             )
         }

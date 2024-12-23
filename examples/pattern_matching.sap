@@ -1,8 +1,8 @@
-v = {a:1, b:2, c:3}
+v = {a:1, b:2, c:4}
 
 v |> 
 match_start |>
     (case \[1,2,3] -> 1) |>
-    (case \{a:1, b:2, c:3} -> 2) |>
+    (case \^{a:1, b:2, c:c} : c > 3 -> 2) |>
     (case \[] -> 3) |>
 match_end |> puts
