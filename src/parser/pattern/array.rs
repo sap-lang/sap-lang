@@ -37,6 +37,7 @@ pub fn parse_array_pattern(array_pattern: Pair<Rule>) -> Result<SapAST, SapParse
     })
 }
 
+
 #[cfg(test)]
 mod tests {
     use pest::Parser;

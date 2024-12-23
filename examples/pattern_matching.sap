@@ -1,0 +1,8 @@
+v = {}
+
+v |> 
+match_start |>
+    (case \[1,2,3] -> {format "{} {} {}" a b c |> puts ; 1}) |>
+    (case \{a:1, b:2, c:3} -> {format "{} {} {}" a b c |> puts; 2}) |>
+    (case \[] -> 3) |>
+match_end |> puts

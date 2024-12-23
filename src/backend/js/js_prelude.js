@@ -20,7 +20,7 @@ const __ENV__ = {
                 }
             },
             function* (__PENV__, a, b) {
-                return a + JSON.stringify(b,null,2)
+                return a + JSON.stringify(b, null, 2)
             }
         ]
     },
@@ -283,7 +283,7 @@ const __ENV__ = {
             template = template.replace(/}}/g, "__RIGHT_BRACE__");
             template = template.replace(/{}/g, () => args[i++]);
             template = template.replace(/{\?}/g, () => JSON.stringify(args[i++]));
-            template = template.replace(/{#\?}/g, () => JSON.stringify(args[i++],null,2));
+            template = template.replace(/{#\?}/g, () => JSON.stringify(args[i++], null, 2));
             template = template.replace(/{\d+}/g, (match) => {
                 const index = parseInt(match.slice(1, -1));
                 return args[index];
@@ -291,6 +291,43 @@ const __ENV__ = {
             template = template.replace(/__LEFT_BRACE__/g, "{");
             template = template.replace(/__RIGHT_BRACE__/g, "}");
             return template;
+        } else {
+            throw new Error('guard failed');
+        }
+    },
+
+    "match_start": function* (__PENV__, a) {
+        if (typeof a !== 'object' || !a.hasOwnProperty('__matcher__')) {
+            const b = { __matcher__: true, matched: false, value: a };
+            return b;
+        }
+    },
+
+    "case": {
+        'slot': [
+            function* (__PENV__, f, a) {
+                let { __matcher__, matched, value: v } = a;
+                if (matched) {
+                    return a;
+                } else {
+                    try {
+                        v = __call__(__PENV__, f, v);
+                        return { __matcher__, matched: true, value: v };
+                    } catch (e) {
+                        return a;
+                    }
+                }
+            }
+        ]
+    },
+
+    "match_end": function* (__PENV__, a) {
+        if (typeof a === 'object' && a.hasOwnProperty('__matcher__')) {
+            if (a.matched) {
+                return a.value;
+            } else {
+                throw new Error('pattern matching failed');
+            }
         } else {
             throw new Error('guard failed');
         }
@@ -317,8 +354,6 @@ const __ENV__ = {
             throw new Error('guard failed');
         }
     },
-
-
 
     "puts": function* (__PENV__, a) {
         if (__is_return__(a)) {

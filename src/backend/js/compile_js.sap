@@ -1,0 +1,22 @@
+# ?= for pattern error handling
+
+compile_block = \ arr -> {
+    [ret, arr] ?= vec |> pop ? {
+        lines = arr |> map compile_inner |> join ";"
+        format ";return {};" (compile_inner ret)
+    } : {
+        "return;"
+    }
+}
+
+pattern_assign = \ pattern value -> {
+    {span, body: {"Pattern": p}} ?= pattern ? {
+
+    }: {
+        {span, body: {"Id": i}} ?= pattern ? {
+
+        } : {
+            format "Expected Pattern or Id, got {?}" pattern |> throw
+        }
+    }
+}

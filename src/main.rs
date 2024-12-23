@@ -9,7 +9,7 @@ pub mod parser;
 pub mod backend;
 
 fn main() {
-    let source = include_str!("../examples/effects.sap");
+    let source = include_str!("../examples/pattern_matching.sap");
     let ast = parser::parse(source);
     let mut file = std::fs::File::create("test.js").unwrap();
     let mut ast_file = std::fs::File::create("test.ast.json").unwrap();
