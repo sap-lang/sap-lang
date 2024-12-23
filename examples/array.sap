@@ -1,0 +1,29 @@
+arr = [1,2,3]
+
+(^[true, 3, arr] ?= arr |> pop) ? 
+    puts("arrays are equal") :
+    puts("arrays are not equal")
+
+format "{?}" arr |> puts
+
+
+arr = arr |> push 3
+
+format "{?}" arr |> puts
+
+arr = arr |> map (\x -> x + 1)
+(^[2,3,four] ?= arr) ? 
+    puts four :
+    puts("arrays are not equal")
+
+arr = arr |> filter (\x -> x % 2 == 0)
+
+format "{?}" arr |> puts
+
+arr = arr |> map (\x -> [x, x + 1]) |> flatten
+
+format "{?}" arr |> puts
+
+res = arr |> reduce 0 (\acc x -> acc + x)
+
+format "{?}" res |> puts

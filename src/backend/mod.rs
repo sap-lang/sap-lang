@@ -45,7 +45,7 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
         });
 
         "{".to_string()
-                + &format!("let {pattern} = {value};")
+                + &format!("let {pattern} = __extract_return__({value});")
                 + &ids
                     .iter()
                     .map(|id| match mode {
@@ -65,7 +65,7 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
                         .iter()
                         .map(|id| {
                             format!(
-                                "if({id}){{}} else {{throw new Error('{id} is not destructed')}}"
+                                "if({id} !== undefined){{}} else {{throw new Error('{id} is not destructed')}}"
                             )
                         })
                         .collect::<Vec<String>>()
@@ -405,7 +405,10 @@ fn compile_inner(ast: SapAST) -> String {
             PatternAssignMode::Assign,
         ),
         crate::ast::SapASTBody::MatchEquals(pattern, sap_ast1) => {
-            pattern_assign(*pattern, compile_inner(*sap_ast1), PatternAssignMode::Match)
+            format!(
+                "((()=>{{try{{{}; return true}}catch(e){{return false}}}})())",
+                pattern_assign(*pattern, compile_inner(*sap_ast1), PatternAssignMode::Match)
+            )
         }
         crate::ast::SapASTBody::AssignGetCont(sap_ast, sap_ast1, sap_ast2) => {
             if let SapASTBody::Id(id) = sap_ast1.body {
