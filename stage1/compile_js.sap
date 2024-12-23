@@ -1,22 +1,63 @@
-# ?= for pattern error handling
-
 compile_block = \ arr -> {
-    [ret, arr] ?= vec |> pop ? {
-        lines = arr |> map compile_inner |> join ";"
-        format ";return {};" (compile_inner ret)
-    } : {
-        "return;"
-    }
+    ( ^[true, ret] ?= arr |> pop ) ? {
+        proc = ret |> map compile_inner |> join ";"
+        ret = format ";return {}" (ret |> compile_inner)
+        proc + ret
+    } : "return;" 
 }
 
-pattern_assign = \ pattern value -> {
-    {span, body: {"Pattern": p}} ?= pattern ? {
 
-    }: {
-        {span, body: {"Id": i}} ?= pattern ? {
 
-        } : {
-            format "Expected Pattern or Id, got {?}" pattern |> throw
-        }
-    }
-}
+
+
+
+compile_inner = \ v -> v |> 
+    match_start |>
+        case \^{Error} -> {} |>
+        case \^{Id} => {} |>
+        case \^{LambdaExpr} -> {} |>
+        case \^{Pattern} -> {} |>
+        case \^{Block} -> {} |>
+        case \^{Literal} -> {} |>
+
+        // prefix
+        case \^{Typeof} -> {} |>
+        case \^{Not} -> {} |>
+        case \^{Neg} -> {} |>
+        case \^{BitNot} -> {} |>
+        case \^{Yield} -> {} |>
+        case \^{YieldChild} -> {} |>
+
+        // infix
+        case \^{Assign} -> {} |>
+        case \^{MatchEquals} -> {} |>
+        case \^{AssignGetCont} -> {} |>
+        case \^{AssignSlot} -> {} |>
+        case \^{Add} -> {} |>
+        case \^{Sub} -> {} |>
+        case \^{Mul} -> {} |>
+        case \^{Div} -> {} |>
+        case \^{Mod} -> {} |>
+        case \^{Eq} -> {} |>
+        case \^{Neq} -> {} |>
+        case \^{Extends} -> {} |>
+        case \^{Le} -> {} |>
+        case \^{Ge} -> {} |>
+        case \^{Lt} -> {} |>
+        case \^{Gt} -> {} |>
+        case \^{And} -> {} |>
+        case \^{Or} -> {} |>
+        case \^{BitOr} -> {} |>
+        case \^{BitAnd} -> {} |>
+        case \^{BitXor} -> {} |>
+        case \^{BitShiftL} -> {} |>
+        case \^{BitShiftR} -> {} |>
+
+        // chain
+        case \^{If} -> {} |>
+        case \^{Slice} -> {} |>
+        case \^{Access} -> {} |>
+        case \^{Index} -> {} |>
+        case \^{App} -> {} |>
+    match_end
+

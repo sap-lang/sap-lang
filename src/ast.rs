@@ -116,10 +116,19 @@ pub enum SapASTBody {
     ),
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SapAST {
     pub span: SapDiagnosticSpan,
     pub body: SapASTBody,
+}
+
+impl Serialize for SapAST {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        self.body.serialize(serializer)
+    }
 }
 
 impl SapAST {
