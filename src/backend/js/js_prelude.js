@@ -397,6 +397,12 @@ __ENV__["__op_index__"] = __ENV__["([])"];
 __ENV__["__op_slice__"] = __ENV__["(slice)"];
 
 
+import { deepEqual } from 'assert';
+
+function __equals__(a, b) {
+    return deepEqual(a, b) === undefined;
+}
+
 function __new_binding__(env, id, value) {
     value = __extract_return__(value);
     return Object.defineProperty(env, id, {

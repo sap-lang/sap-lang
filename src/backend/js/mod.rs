@@ -32,7 +32,7 @@ fn pattern_assign(pattern: SapAST, value: String) -> String {
         if let Pattern::Literal(literal) = p {
             let literal = compile_literal(literal.clone());
             format!(
-                "{literal} === {value} ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+                "__equals__({literal},{value}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
             )
         } else {
             let pattern = compile_inner(pattern.clone());
@@ -72,7 +72,7 @@ fn pattern_match_assign(pattern: SapAST, value: String) -> String {
         let exprs = if let Pattern::Literal(literal) = p {
             let literal = compile_literal(literal.clone());
             format!(
-                "{literal} === {value} ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+                "__equals__({literal}, {value}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
             )
         } else {
             let pattern = compile_inner(pattern.clone());
@@ -121,7 +121,7 @@ fn pattern_assign_get_cont(pattern: SapAST, cid: String, value: String) -> Strin
         if let Pattern::Literal(literal) = p {
             let literal = compile_literal(literal.clone());
             format!(
-                "{literal} === {value} ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
+                "__equals__({literal}, {value}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
             )
         } else {
             let pattern = compile_inner(pattern.clone());
@@ -283,7 +283,7 @@ fn compile_inner(ast: SapAST) -> String {
                     .map(|(pattern, arg)| {
                         if let SapASTBody::Pattern(Pattern::Literal(l)) = pattern.body {
                             let l = compile_literal(l);
-                            format!("({l} === {arg})")
+                            format!("(__equals__({l},{arg}))")
                         } else {
                             let pattern_assign = pattern_assign(pattern, arg.clone());
                             format!("(( ()=>{{ {pattern_assign}; return true; }} )())")

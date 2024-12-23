@@ -193,11 +193,11 @@ eclipse_pattern = ${ "..." ~ id }
 
 array_pattern_elem =  { pattern | eclipse_pattern }
 array_pattern_body = _{ array_pattern_elem ~ ("," ~ NEWLINE* ~ array_pattern_elem)* }
-array_pattern      =  { ("^[" | "[") ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
+array_pattern      =  { "^["  ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
 
 object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | id | eclipse_pattern }
 object_pattern_body = _{ object_pattern_elem ~ ("," ~ NEWLINE* ~ object_pattern_elem)* }
-object_pattern      =  { ("^{" | "{") ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
+object_pattern      =  { "^{" ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
 
 pattern = {
     array_pattern

@@ -4,7 +4,7 @@ A = \ a s -> {"c", a} <: s
 
 a = A 1 (B 2)
 
-{a,b,c,...rest} = a
+^{a,b,c,...rest} = a
 
 // 1
 puts a
