@@ -224,7 +224,7 @@ fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
 }
 
 pub fn compile(ast: Vec<SapAST>) -> String {
-    let append_file = APPEND_FILE;
+    let append_file = append_file("src/backend/prelude");
     let body = ast
         .into_iter()
         .map(compile_inner)
@@ -580,4 +580,18 @@ fn compile_inner(ast: SapAST) -> String {
     }
 }
 
-const APPEND_FILE: &str = include_str!("js_prelude.js");
+
+pub fn append_file(dir: &str) -> String {
+    const APPEND_FILE: &str = include_str!("prelude.js");
+
+    let dir = std::fs::read_dir(dir).unwrap();
+    let mut files = vec![];
+    for file in dir {
+        let file = file.unwrap();
+        let file_content = std::fs::read_to_string(file.path()).unwrap();
+        files.push(file_content);
+    }
+    let std = files.join("\n");
+    
+    format!("{}\n{}", APPEND_FILE, std)
+}
