@@ -230,13 +230,14 @@ fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
     }
 }
 
-pub fn compile(ast: Vec<SapAST>) -> String {
+pub fn compile(ast: Vec<SapAST>, lib: bool) -> String {
     let append_file = append_file("src/backend/prelude");
     let body = ast
         .into_iter()
         .map(compile_inner)
         .collect::<Vec<String>>()
         .join(";\n");
+    
     format!(
         "
 {append_file}
@@ -273,6 +274,7 @@ __rl.close();
 fn compile_inner(ast: SapAST) -> String {
     match ast.body {
         crate::ast::SapASTBody::Id(id) => format!("__ENV__['{}']", id.0),
+        crate::ast::SapASTBody::Macro(id) => todo!(),
         crate::ast::SapASTBody::LambdaExpr(LambdaExpr {
             patterns,
             implicit_params,

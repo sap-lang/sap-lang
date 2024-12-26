@@ -20,6 +20,10 @@ fn parse_id_child(id: Pair<Rule>) -> Result<SapAST, SapParserError> {
             body: SapASTBody::Id(Id(id.as_str().to_string())),
         }),
 
+        Rule::macro_id => Ok(SapAST {
+            span: SapDiagnosticSpan::from_pest_span(&id.as_span()),
+            body: SapASTBody::Macro(Id(id.as_str().to_string())),
+        }),
         _ => unreachable!("Invalid id rule: {:?}", id),
     }
 }
