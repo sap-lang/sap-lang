@@ -1,0 +1,27 @@
+replace_all_literal_in_pattern ::= \^{Id} i -> [i, {Id}, {,}]
+replace_all_literal_in_pattern ::= \^{Eclipse} i -> [i, {Eclipse}, {,}]
+replace_all_literal_in_pattern ::= \^{Literal} i -> {
+    is = format "{}" i
+    [i+1, {Id: "_l_"+i}, {,} |> push i is]
+}
+replace_all_literal_in_pattern ::= \^{Array} i -> {
+    ^[i, p, m] = Array |> reduce [i, [], {,}] (\^[ii, pp, ss] x -> {
+        ^[i,p,s] = replace_all_literal_in_pattern x ii
+        [i, pp |> push p, ss |> push s]
+    })
+    [i, {Array: p}, m]
+}
+replace_all_literal_in_pattern ::= \^{Object} i -> {
+    Object |> reduce [i, [], {,}] (\^[ii, pp, ss] x -> {
+        (^{KV} ?= x) ? {
+            k = KV[0]
+            ^{Pattern} = KV[1]
+            ^[i, p, s] = replace_all_literal_in_pattern Pattern ii
+            [i, pp |> push {KV: [k, p]}, ss |> push s]
+        } : {
+            [ii, pp |> push x, ss] 
+        }
+    })
+}
+
+@export {replace_all_literal_in_pattern}

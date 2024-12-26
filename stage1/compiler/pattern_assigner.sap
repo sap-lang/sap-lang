@@ -1,0 +1,44 @@
+@import pattern_id_finder
+@import pattern_id_replacer
+
+pattern_assign ::= \ ^{Id} value mode -> {
+    pattern_assign {"Pattern": {"Id": Id}} value mode
+}
+
+pattern_assign ::= \ ^{Pattern} value mode ? replace_all_literal_in_pattern find_all_ids_in_pattern compile_inner -> {
+    i = 0
+    ^[i, p, m] = replace_all_literal_in_pattern Pattern i
+
+    ids = find_all_ids_in_pattern p
+
+    pattern = compile_inner p
+
+    "{" +
+        // js destructuring
+        (format "let {} = __extract_return__({});" pattern value) +
+        // binding id to __ENV__
+        (ids |> map (\id->{
+            ^{__mode__: m} = mode
+            (m == "Assign" || m == "Match") ? {
+                format "__new_binding__(__ENV__, '{0}', {0})" id
+            } : {
+                cid = mode["cid"]
+                format "__new_binding_cont__(__ENV__, '{0}', '{1}', {0})" id cid
+            } 
+        }) |> join ";") + 
+        ";" +
+        // check if all ids are destructed
+        ((^{__mode__: "Match"} ?= mode) ? {
+            format "if({0} !== undefined){{}}else{{}}{{throw new Error('{0} is not destructed')}}" id
+        } : "") + ";" +
+
+        // check literal pattern with __equals__
+        (m |> map (\k v -> {
+            literal = compile_literal v
+            format "__equals__(_l_{0},{1}) ? {1} : ((()=>{{ throw new Error('Pattern {1} not matched') }})())" k literal
+        }) |> join ";") + 
+        ";" + 
+    "}"
+}
+
+@export {pattern_assign}

@@ -1,0 +1,21 @@
+compile_literal ::= \ ^{Literal: ^{Null}} -> "null"
+compile_literal ::= \ ^{Literal: ^{Undefined}} -> "undefined"
+compile_literal ::= \ ^{Literal: ^{Void}} -> "{__void__: true}"
+compile_literal ::= \ ^{Literal: ^{Slot}} -> "{slot: []}"
+
+compile_literal ::= \ ^{Literal: ^{Number: ^{Int}}} -> Int
+compile_literal ::= \ ^{Literal: ^{Number: ^{Float}}} -> Float
+
+compile_literal ::= \ ^{Literal: ^{String: ^{SingleLine}}} -> format "`{}`" (SingleLine |> replace "\\" "\\\\" |> replace "`" "\\`")
+compile_literal ::= \ ^{Literal: ^{String: ^{MultiLine}}} -> format "`{}`" (SingleLine |> replace "\\" "\\\\" |> replace "`" "\\`")
+compile_literal ::= \ ^{Literal: ^{String: ^{Raw}}} -> format "`{}`" (SingleLine |> replace "\\" "\\\\" |> replace "`" "\\`")
+
+compile_literal ::= \ ^{Literal: ^{Array}} ? compile_inner -> {
+    format "[{}]" (Array |> map compile_inner |> map (\x->format "__extract_return__({})" x) |> join ",")
+}
+
+compile_literal ::= \ ^{Literal: ^{Object}} ? compile_inner -> {
+    format "{{ {} }}" (Object |> map (\k v -> format "{}: __extract_return__({})" k (compile_inner v)) |> join ",")
+}
+
+@export {compile_literal}

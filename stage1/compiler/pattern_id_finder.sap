@@ -1,0 +1,17 @@
+find_all_ids_in_pattern ::= \^{Id} -> [Id]
+find_all_ids_in_pattern ::= \^{Literal} -> []
+find_all_ids_in_pattern ::= \^{Array} -> Array |> flatten |> map find_all_ids_in_pattern
+find_all_ids_in_pattern ::= \^{Eclipse: ^{EclipsePattern: ^{Id}}} -> [Id]
+find_all_ids_in_pattern ::= \^{Object} -> {
+    hh ::= \^{KV} -> {
+        (^{Pattern} ?= KV[1] ) ? {
+            find_all_ids_in_pattern KV[1]
+        } : {puts "not implemented"}
+    }
+
+    hh ::= \^{Eclipse: ^{EclipsePattern: ^{Id}}} -> [Id]
+    
+    Object |> map hh |> flatten
+}
+
+@export {find_all_ids_in_pattern}

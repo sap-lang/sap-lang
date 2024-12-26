@@ -1,0 +1,28 @@
+_1_parser = \ stream resume -> {
+    c = peek stream
+    ( c == "1" ) ? {
+        resume (next stream)
+    } : {
+        resume (error "Expecting 1")
+    }
+}
+
+_0_parser = \ stream resume -> {
+    c = peek stream
+    ( c == "0" ) ? {
+        resume (next stream)
+    } : {
+        resume (error "Expecting 0")
+    }
+}
+
+or_op = \ f1 f2 -> {
+    \ stream resume -> {
+        f1 stream 
+    }
+}
+
+parser = \ stream resume break ->{
+    _1_parser | _0_parser
+}
+

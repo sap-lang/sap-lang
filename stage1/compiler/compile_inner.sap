@@ -1,0 +1,249 @@
+@import literal_compiler
+@import pattern_assigner
+
+compile_block = \ arr -> {
+    ( ^[true, ret, arr] ?= arr |> pop ) ? {
+        proc = ret |> map compile_inner |> join ";"
+        ret = format ";return {}" (ret |> compile_inner)
+        proc + ret
+    } : "return;" 
+}
+
+compile_inner ::= \ ^{Error} -> "throw new Error('Error')"
+compile_inner ::= \ ^{Id} -> format "__ENV__['{}']" Id
+compile_inner ::= \ ^{LambdaExpr : ^{patterns, implicit_params, guard, body}} -> {
+    args = range 0 (patterns |> length) |> map (\i -> format "_{}" i) |> join ","
+
+    pattern = ((patterns |> length) > 0) ? {
+        patterns |> 
+            zip args |> 
+            map (\^[p, a] -> format "((()=>{{ {}; return true}})())" (pattern_assign p a {__mode__: "Match"})) |>
+            join "&&"
+    } : "true"
+
+    implicit_param = implicit_params |>
+        map (\^{Id} -> Id) |>
+        map (\id -> format "__new_binding__(__ENV__, '{0}', __PENV__['{0}'])" id) |>
+        join ";"
+    
+    body = (^{Block} ?= body) ? {
+        compile_block body
+    } : {
+        body = compile_inner body
+        format "return {};" body
+    }
+
+    body = (guard != null) ? {
+        guard = compile_inner guard
+        format "if (__extract_return__({})) {{ {}; {} }} else {{ throw new Error('guard failed'); }}" guard implicit_param body
+    } : {
+        implicit_param + "; " + body
+    }
+
+    format `
+    (function*(__PENV__, {}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __PENV__;
+        {}
+        {}
+    }})
+    ` args pattern body
+}
+
+compile_inner ::= \ ^{Pattern: ^{Id}} -> Id
+compile_inner ::= \ ^{Pattern: ^{Literal}} -> compile_literal Literal
+compile_inner ::= \ ^{Pattern: ^{Eclipse}} -> format "...{}" Eclipse
+compile_inner ::= \ ^{Pattern: ^{Array}} -> format "[{}]" (Array |> map compile_inner |> join ",")
+compiler_inner ::= \ ^{Pattern: ^{Object}} -> {}
+
+compile_inner ::= \ ^{Block} -> {
+    blk = compile_block {Block,}
+    format "(__call__(__ENV__, (function*(){{ {} }}), {{__void__:true}}))" blk
+}
+compile_inner ::= \ ^{Literal} -> compile_literal Literal
+
+compile_inner ::= \ ^{Typeof} -> format "(typeof {})" (compile_inner Typeof)
+compile_inner ::= \ ^{Yield} -> format "(yield {})" (compile_inner Yield)
+compile_inner ::= \ ^{YieldChild} -> {
+    format "(yield* (function*(){{ const r = {0}; if (__is_return__(r)){{return (yield r.value)}} else {{return (yield* r)}} }})())" (compile_inner YieldChild)
+}
+
+compile_inner ::= \ ^{Assign} -> {
+    pattern = Assign[0]
+    value = Assign[1]
+
+    pattern_assign pattern (compile_inner value) {__mode__: "Assign"}
+}
+
+compile_inner ::= \ ^{MatchEquals} -> {
+    pattern = MatchEquals[0]
+    value = MatchEquals[1]
+
+    r = pattern_assign pattern (compile_inner value) {__mode__: "Match"}
+    format "((()=>{{try{{ {}; return true}}catch(e){{ return false }} }})())" r
+}
+
+compile_literal ::= \ ^{AssignGetCont} -> {
+    (^{Id} ?= AssignGetCont[0]) ? {
+        pattern_assign AssignGetCont[0] (compile_inner AssignGetCont[2]) {__mode__: "AssignGetCont", cid: AssignGetCont[1]["Id"]}
+    } : {
+        puts "not implemented"
+    }
+}
+
+compile_inner ::= \ ^{AssignSlot} -> {
+    (^{Id} ?= AssignSlot[0]) ? {
+        a = Id
+        b = compile_inner AssignSlot[1]
+        format "__new_slot_binding__(__ENV__, '{0}', {1})" a b
+    } : {
+        puts "not implemented"
+    }
+}
+
+compile_inner ::= \ ^{If} -> {
+    cond = compile_inner If[0]
+    then = compile_inner If[1]
+    else_ = compile_inner If[2]
+
+    format "((()=>{{if (__extract_return__({0})) {{ return {1} }} else {{ return {2} }} }})())" cond then else_
+}
+
+compile_inner ::= \ ^{Not} -> {
+    format "__call__(__ENV__, __ENV__['(!)'], {0})" (compile_inner Not[0])
+}
+
+compile_inner ::= \ ^{Neg} -> {
+    format "__call__(__ENV__, __ENV__['(neg)'], {0})" (compile_inner Neg[0])
+}
+
+compile_inner ::= \ ^{BitNot} -> {
+    format "__call__(__ENV__, __ENV__['(~)'], {0})" (compile_inner BitNot[0])
+}
+
+compile_inner ::= \ ^{Add} -> {
+    format "__call__(__ENV__, __ENV__['(+)'], {0}, {1})" (compile_inner Add[0]) (compile_inner Add[1])
+}
+
+compile_inner ::= \ ^{Sub} -> {
+    format "__call__(__ENV__, __ENV__['(-)'], {0}, {1})" (compile_inner Sub[0]) (compile_inner Sub[1])
+}
+
+compile_inner ::= \ ^{Mul} -> {
+    format "__call__(__ENV__, __ENV__['(*)'], {0}, {1})" (compile_inner Mul[0]) (compile_inner Mul[1])
+}
+
+compile_inner ::= \ ^{Div} -> {
+    format "__call__(__ENV__, __ENV__['(/)'], {0}, {1})" (compile_inner Div[0]) (compile_inner Div[1])
+}
+
+compile_inner ::= \ ^{Mod} -> {
+    format "__call__(__ENV__, __ENV__['(%)'], {0}, {1})" (compile_inner Mod[0]) (compile_inner Mod[1])
+}
+
+compile_inner ::= \ ^{Eq} -> {
+    format "__call__(__ENV__, __ENV__['(==)'], {0}, {1})" (compile_inner Eq[0]) (compile_inner Eq[1])
+}
+
+compile_inner ::= \ ^{Neq} -> {
+    format "__call__(__ENV__, __ENV__['(!=)'], {0}, {1})" (compile_inner Neq[0]) (compile_inner Neq[1])
+}
+
+compile_inner ::= \ ^{Le} -> {
+    format "__call__(__ENV__, __ENV__['(<=)'], {0}, {1})" (compile_inner Le[0]) (compile_inner Le[1])
+}
+
+compile_inner ::= \ ^{Ge} -> {
+    format "__call__(__ENV__, __ENV__['(>=)'], {0}, {1})" (compile_inner Ge[0]) (compile_inner Ge[1])
+}
+
+compile_inner ::= \ ^{Lt} -> {
+    format "__call__(__ENV__, __ENV__['(<)'], {0}, {1})" (compile_inner Lt[0]) (compile_inner Lt[1])
+}
+
+compile_inner ::= \ ^{Gt} -> {
+    format "__call__(__ENV__, __ENV__['(>)'], {0}, {1})" (compile_inner Gt[0]) (compile_inner Gt[1])
+}
+
+compile_inner ::= \ ^{And} -> {
+    format "__call__(__ENV__, __ENV__['(&&)'], {0}, {1})" (compile_inner And[0]) (compile_inner And[1])
+}
+
+compile_inner ::= \ ^{Or} -> {
+    format "__call__(__ENV__, __ENV__['(||)'], {0}, {1})" (compile_inner Or[0]) (compile_inner Or[1])
+}
+
+compile_inner ::= \ ^{BitOr} -> {
+    format "__call__(__ENV__, __ENV__['(|)'], {0}, {1})" (compile_inner BitOr[0]) (compile_inner BitOr[1])
+}
+
+compile_inner ::= \ ^{BitAnd} -> {
+    format "__call__(__ENV__, __ENV__['(&)'], {0}, {1})" (compile_inner BitAnd[0]) (compile_inner BitAnd[1])
+}
+
+compile_inner ::= \ ^{BitXor} -> {
+    format "__call__(__ENV__, __ENV__['(^)'], {0}, {1})" (compile_inner BitXor[0]) (compile_inner BitXor[1])
+}
+
+compile_inner ::= \ ^{BitShiftL} -> {
+    format "__call__(__ENV__, __ENV__['(<<)'], {0}, {1})" (compile_inner BitShiftL[0]) (compile_inner BitShiftL[1])
+}
+
+compile_inner ::= \ ^{BitShiftR} -> {
+    format "__call__(__ENV__, __ENV__['(>>)'], {0}, {1})" (compile_inner BitShiftR[0]) (compile_inner BitShiftR[1])
+}
+
+compile_inner ::= \ ^{Extends} -> {
+    a = compile_inner Extends[0]
+    b = compile_inner Extends[1]
+    format "((()=>{{let a = {};let b = {}; a.__proto__ = b; return a;}})())" a b
+}
+
+compile_inner ::= \ ^{Slice} -> {
+    arr = compile_inner Slice[0]
+
+    a = (compile_inner Slice[1] == undefined) ? {
+        "0"
+    } : {
+        compile_inner Slice[1]
+    }
+
+    b = (compile_inner Slice[2] == undefined) ? {
+        "-1"
+    } : {
+        compile_inner Slice[2]
+    }
+    
+    c = (compile_inner Slice[3] == undefined) ? {
+        "1"
+    } : {
+        compile_inner Slice[3]
+    }
+
+    format "__call__(__ENV__, __ENV__['(slice)'], {}, {}, {}, {})" arr a b c
+}
+
+compile_inner ::= \ ^{Access} -> {
+    arr = compile_inner Access[0]
+    idx = Access[1]["Id"]
+
+    format "{}['{}']" arr idx
+}
+
+compile_inner ::= \ ^{Index} -> {
+    arr = compile_inner Index[0]
+    idx = compile_inner Index[1]
+
+    format "__call__(__ENV__, __ENV__['([])'], {}, {})" arr idx
+}
+
+compile_inner ::= \ ^{App} -> {
+    f = compile_inner App[0]
+    args = App[1] |> map compile_inner |> join ","
+
+    format "__call__(__ENV__, {}, {})" f args
+}
+
+compile_inner ::= \ ^{Error} -> {
+    puts Error
+}
+
+@export {compile_inner}
