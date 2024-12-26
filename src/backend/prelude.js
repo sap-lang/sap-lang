@@ -116,3 +116,5 @@ function __call__(env, f, ...args) {
         throw new Error(`Not a function: ${f}`);
     }
 }
+
+let __CENV__ = __ENV__;

@@ -45,7 +45,11 @@ fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> St
         });
 
         "{".to_string()
-                + &format!("let {pattern} = __extract_return__({value});")
+                + &if matches!(mode , PatternAssignMode::Assign) || matches!(mode , PatternAssignMode::Match) {
+                    format!("let {pattern} = __extract_return__({value});")
+                } else {
+                    format!("let {pattern} = {value};")
+                }
                 + &ids
                     .iter()
                     .map(|id| match mode {
@@ -336,7 +340,7 @@ fn compile_inner(ast: SapAST) -> String {
 
             format!(
                 "
-(function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __PENV__;
+(function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __CENV__;
         {pattern}
         {body}
 }})
