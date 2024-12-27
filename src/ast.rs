@@ -13,6 +13,7 @@ use crate::{
 pub enum SapASTBody {
     Error(SapParserError),
     Id(Id),
+    Macro(Id),
     LambdaExpr(LambdaExpr),
     Pattern(Pattern),
     Block(Vec<SapAST>),
