@@ -1,13 +1,22 @@
 
-import { deepEqual } from 'assert';
+import { __init_collection__ } from './collection.js';
+import { __init_match__ } from './match.js';
+import { __init_ops__ } from './ops.js';
+import { __init_string__ } from './string.js';
 
-const __ENV__ = {}
 
-function __equals__(a, b) {
-    return deepEqual(a, b) === undefined;
+export function __init_prelude_env__(env) {
+    __init_collection__(env);
+    __init_match__(env);
+    __init_ops__(env);
+    __init_string__(env);
 }
 
-function __new_binding__(env, id, value) {
+export function __equals__(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export function __new_binding__(env, id, value) {
     value = __extract_return__(value);
     return Object.defineProperty(env, id, {
         value: value,
@@ -17,7 +26,7 @@ function __new_binding__(env, id, value) {
     })
 }
 
-function __new_binding_cont__(env, id, cid, v) {
+export function __new_binding_cont__(env, id, cid, v) {
     if (__is_return__(v)) {
         const { value, next, ..._ } = v;
         Object.defineProperty(env, cid, {
@@ -42,11 +51,11 @@ function __new_binding_cont__(env, id, cid, v) {
     }
 }
 
-function __get_binding__(env, id) {
+export function __get_binding__(env, id) {
     return env.hasOwnProperty(id) ? env[id] : undefined;
 }
 
-function __new_slot_binding__(env, id, v) {
+export function __new_slot_binding__(env, id, v) {
     if (__is_return__(v)) {
         const { value, ..._ } = v;
         return __get_binding__(env, id) ? ((() => {
@@ -67,18 +76,26 @@ function __new_slot_binding__(env, id, v) {
     }
 }
 
-function __is_return__(value) {
+export function __is_return__(value) {
     return value instanceof Object && value.hasOwnProperty('__ret__') && value.hasOwnProperty('value') && value.hasOwnProperty('next')
 }
 
-function __extract_return__(value) {
+export function __extract_return__(value) {
+    if (Array.isArray(value)) {
+        return value.map(__extract_return__);
+    }
+    if (typeof value === 'object' && value !== null) {
+        for (const key in value) {
+            value[key] = __extract_return__(value[key]);
+        }
+    }
     while (__is_return__(value)) {
         value = value.value;
     }
     return value;
 }
 
-function __return_value__(value, next) {
+export function __return_value__(value, next) {
     return {
         value,
         next,
@@ -86,7 +103,22 @@ function __return_value__(value, next) {
     }
 }
 
-function __call__(env, f, ...args) {
+export function* __yield_child__(env, v) {
+    if (__is_return__(v)) {
+        const { value, next, ..._ } = v;
+
+        const rv = yield __extract_return__(value);
+        if (next !== undefined) {
+            return yield* __yield_child__(env, __call__(env, next, rv))
+        } else {
+            return rv;
+        }
+    } else {
+        return yield* v;
+    }
+}
+
+export function __call__(env, f, ...args) {
     f = __extract_return__(f);
     args = args.map(__extract_return__);
     if (typeof f === 'function') {
@@ -117,4 +149,5 @@ function __call__(env, f, ...args) {
     }
 }
 
-let __CENV__ = __ENV__;
+
+

@@ -1,3 +1,5 @@
+import { __call__ } from './prelude.js';
+
 const __MATCH__ = {
         "match_start": function* (__PENV__, a) {
             if (typeof a !== 'object' || !a.hasOwnProperty('__matcher__')) {
@@ -37,6 +39,8 @@ const __MATCH__ = {
         },
 }
 
-for (const key in __MATCH__) {
-    __ENV__[key] = __MATCH__[key];
+export function __init_match__ (__ENV__) {
+    for (const key in __MATCH__) {
+        __ENV__[key] = __MATCH__[key];
+    }
 }

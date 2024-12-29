@@ -82,7 +82,7 @@ fn parse_expr(source: &str) -> SapAST {
 }
 
 pub fn parse(source: &str) -> Vec<SapAST> {
-    let source = format!("{{ {source} }}");
+    let source = format!("{{ {source} ;}}");
     if let SapAST {
         span: _,
         body: SapASTBody::Block(vec),

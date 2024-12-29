@@ -1,3 +1,4 @@
 /target
 test.js
 *.json
+/test_output

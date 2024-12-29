@@ -29,7 +29,7 @@ pub fn parse_infix(
         end_line: rhs.span.end_line,
         end_col: rhs.span.end_col,
         end_offset: rhs.span.end_offset,
-        source: pair.as_str().to_string(),
+        span: pair.as_str().to_string(),
     };
 
     let rhs = if let SapASTBody::Pattern(_) = rhs.body {
@@ -57,7 +57,7 @@ pub fn parse_infix(
             _ => SapAST::error(SapParserError {
                 span: lhs.span.clone(),
                 code: SapParserErrorCode::AssignExprLHSNotAssignable,
-                message: "Left side of assignment is not assignable".to_string(),
+                message: format!("Left side of assignment {:?} is not assignable", lhs),
             }),
         }
     } else if let SapASTBody::Pattern(_) = lhs.body {

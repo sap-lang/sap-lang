@@ -1,4 +1,4 @@
-const __ARRAY__ = {
+const __COLLECTION__ = {
 
     "range": function* (__PENV__, start, end) {
         if (typeof start === 'number' && typeof end === 'number') {
@@ -11,6 +11,14 @@ const __ARRAY__ = {
     "length": function* (__PENV__, arr) {
         if (Array.isArray(arr)) {
             return arr.length;
+        } else {
+            throw new Error('guard failed');
+        }
+    },
+
+    "concat": function* (__PENV__, arr1, arr2) {
+        if (Array.isArray(arr1) && Array.isArray(arr2)) {
+            return arr1.concat(arr2);
         } else {
             throw new Error('guard failed');
         }
@@ -69,7 +77,7 @@ const __ARRAY__ = {
         "slot": [
             function* (__PENV__, f, arr) {
                 if (Array.isArray(arr)) {
-                    return arr.map((x) => __extract_return__(__call__(__PENV__, f, x)));
+                    return arr.map((x) => __call__(__PENV__, f, x));
                 }
             },
             // object
@@ -77,7 +85,7 @@ const __ARRAY__ = {
                 if (typeof obj === 'object') {
                     // f has two arguments
                     return Object.fromEntries(Object.entries(obj).map(([k, v]) => {
-                        return __extract_return__(__call__(__PENV__, f, k, v));
+                        return __call__(__PENV__, f, k, v);
                     }));
                 }
             }
@@ -86,13 +94,13 @@ const __ARRAY__ = {
 
     "filter": function* (__PENV__, f, arr) {
         if (Array.isArray(arr)) {
-            return arr.filter((x) => __extract_return__(__call__(__PENV__, f, x)));
+            return arr.filter((x) => __call__(__PENV__, f, x));
         }
     },
 
     "reduce": function* (__PENV__, init, f, arr) {
         if (Array.isArray(arr)) {
-            return arr.reduce((acc, x) => __extract_return__(__call__(__PENV__, f, acc, x)), init);
+            return arr.reduce((acc, x) => __call__(__PENV__, f, acc, x), init);
         }
     },
 
@@ -105,6 +113,8 @@ const __ARRAY__ = {
     },
 }
 
-for (const key in __ARRAY__) {
-    __ENV__[key] = __ARRAY__[key];
+export function __init_collection__(__ENV__) {
+    for (const key in __COLLECTION__) {
+        __ENV__[key] = __COLLECTION__[key];
+    }
 }

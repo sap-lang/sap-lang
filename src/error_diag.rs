@@ -39,7 +39,7 @@ pub struct SapDiagnosticSpan {
     pub end_col: usize,
     pub end_offset: usize,
 
-    pub source: String,
+    pub span: String,
 }
 
 impl SapDiagnosticSpan {
@@ -56,7 +56,7 @@ impl SapDiagnosticSpan {
             end_line,
             end_col,
             end_offset,
-            source,
+            span: source,
         }
     }
 }
@@ -65,7 +65,7 @@ impl ariadne::Span for SapDiagnosticSpan {
     type SourceId = String;
 
     fn source(&self) -> &Self::SourceId {
-        &self.source
+        &self.span
     }
 
     fn start(&self) -> usize {

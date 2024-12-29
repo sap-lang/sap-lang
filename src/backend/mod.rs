@@ -1,11 +1,15 @@
-use std::collections::HashMap;
 
-// FIXME: `=` 换成 get set binding
+pub mod literal;
+pub mod module;
+pub mod pattern;
+
+use literal::compile_literal;
+use pattern::{PatternAssignMode, pattern_assign};
+
 use crate::{
     ast::{SapAST, SapASTBody},
     parser::{
-        literal::{Literal, number::Number, string::StringLiteral},
-        pattern::{EclipsePattern, ObjectInner, Pattern},
+        pattern::{EclipsePattern, ObjectInner},
         primary::lambda_expr::LambdaExpr,
     },
 };
@@ -22,263 +26,10 @@ fn compile_block(mut vec: Vec<SapAST>) -> String {
     }
 }
 
-enum PatternAssignMode {
-    Assign,
-    Match,
-    AssignGetCont(String),
-}
-
-fn pattern_assign(pattern: SapAST, value: String, mode: PatternAssignMode) -> String {
-    if let pattern @ SapAST {
-        span: _,
-        body: SapASTBody::Pattern(p),
-    } = &pattern
-    {
-        let mut i = 0;
-        let (p, map) = replace_all_literal_in_pattern(p, &mut i);
-
-        let ids = find_all_ids_in_pattern(&p);
-
-        let pattern = compile_inner(SapAST {
-            span: pattern.span.clone(),
-            body: SapASTBody::Pattern(p),
-        });
-
-        "{".to_string()
-                + &if matches!(mode , PatternAssignMode::Assign) || matches!(mode , PatternAssignMode::Match) {
-                    format!("let {pattern} = __extract_return__({value});")
-                } else {
-                    format!("let {pattern} = {value};")
-                }
-                + &ids
-                    .iter()
-                    .map(|id| match mode {
-                        PatternAssignMode::Assign | PatternAssignMode::Match => {
-                            format!("__new_binding__(__ENV__, '{id}', {id})")
-                        }
-                        PatternAssignMode::AssignGetCont(ref cid) => {
-                            format!("__new_binding_cont__(__ENV__, '{id}', '{cid}', {id})")
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join(";")
-                + ";" 
-                + &match mode {
-                    PatternAssignMode::Assign => String::new(),
-                    PatternAssignMode::Match => ids
-                        .iter()
-                        .map(|id| {
-                            format!(
-                                "if({id} !== undefined){{}} else {{throw new Error('{id} is not destructed')}}"
-                            )
-                        })
-                        .collect::<Vec<String>>()
-                        .join(";"),
-                    PatternAssignMode::AssignGetCont(_) => String::new(),
-                }
-                + ";" +
-
-                    &map.into_iter().map(|(k, v) | {
-                        let literal = compile_literal(v);
-                        format!(
-                            "__equals__(_l_{k},{literal}) ? {literal} : ((()=>{{ throw new Error('Pattern {literal} not matched') }})())"
-                        )
-                    }).collect::<Vec<String>>().join(";") + "}"
-    } else if let SapAST {
-        span,
-        body: SapASTBody::Id(i),
-    } = pattern
-    {
-        let pattern_ast = SapAST {
-            span,
-            body: SapASTBody::Pattern(Pattern::Id(i.clone())),
-        };
-        pattern_assign(pattern_ast, value, mode)
-    } else {
-        unreachable!("Expected pattern, got {:?}", pattern)
-    }
-}
-
-fn compile_literal(literal: Literal) -> String {
-    match literal {
-        Literal::Null => "null".into(),
-        Literal::Undefined => "undefined".into(),
-        Literal::Void => "{__void__:true}".into(),
-        Literal::Slot => "{slot: []}".into(),
-        Literal::Boolean(b) => b.to_string(),
-        Literal::Number(number) => match number {
-            Number::Int(i) => i.to_string(),
-            Number::Float(f) => f.to_string(),
-            // Number::BigInt(_big_int) => unimplemented!(),
-        },
-        Literal::String(string_literal) => match string_literal {
-            StringLiteral::SingleLine(s) => {
-                format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
-            }
-            StringLiteral::MultiLine(s) => {
-                format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
-            }
-            StringLiteral::Raw(s) => {
-                format!("`{}`", s.replace("\\", "\\\\").replace("`", "\\`"))
-            }
-        },
-        Literal::Array(vec) => format!(
-            "[{}]",
-            vec.into_iter()
-                .map(compile_inner)
-                .map(|x| format!("__extract_return__({x})"))
-                .collect::<Vec<String>>()
-                .join(",")
-        ),
-        Literal::Object(vec) => format!(
-            "{{{}}}",
-            vec.into_iter()
-                .map(|(k, v)| format!("{}: __extract_return__({})", k, compile_inner(v)))
-                .collect::<Vec<String>>()
-                .join(",")
-        ),
-    }
-}
-
-fn replace_all_literal_in_pattern(
-    pattern: &Pattern,
-    i: &mut i32,
-) -> (Pattern, HashMap<i32, Literal>) {
-    let mut map = HashMap::new();
-    match pattern {
-        Pattern::Id(_) => (pattern.clone(), map),
-        Pattern::Literal(l) => {
-            let ii = *i;
-            map.insert(ii, l.clone());
-            *i += 1;
-            (
-                Pattern::Id(crate::parser::primary::id::Id(format!("_l_{ii}"))),
-                map,
-            )
-        }
-        Pattern::Array(vec) => {
-            let mut new_vec = vec![];
-            for x in vec {
-                if let SapASTBody::Pattern(p) = &x.body {
-                    let (new_x, new_map) = replace_all_literal_in_pattern(p, i);
-                    new_vec.push(SapAST {
-                        span: x.span.clone(),
-                        body: SapASTBody::Pattern(new_x),
-                    });
-                    map.extend(new_map);
-                } else {
-                    unreachable!()
-                }
-            }
-            (Pattern::Array(new_vec), map)
-        }
-        Pattern::Eclipse(_) => (pattern.clone(), map),
-        Pattern::Object(vec) => {
-            let mut new_vec = vec![];
-            for object_inner in vec {
-                match object_inner {
-                    ObjectInner::KV(k, v) => {
-                        let vs = v.span.clone();
-                        let v = if let SapASTBody::Pattern(p) = &v.body {
-                            p
-                        } else {
-                            unreachable!()
-                        };
-                        let (new_v, new_map) = replace_all_literal_in_pattern(v, i);
-                        new_vec.push(ObjectInner::KV(k.clone(), SapAST {
-                            span: vs,
-                            body: SapASTBody::Pattern(new_v),
-                        }));
-                        map.extend(new_map);
-                    }
-                    ObjectInner::Eclipse(_) => {
-                        new_vec.push(object_inner.clone());
-                    }
-                }
-            }
-            (Pattern::Object(new_vec), map)
-        }
-    }
-}
-
-fn find_all_ids_in_pattern(pattern: &Pattern) -> Vec<String> {
-    match pattern {
-        Pattern::Id(id) => vec![id.0.clone()],
-        Pattern::Array(vec) => vec
-            .iter()
-            .map(|x| {
-                if let SapASTBody::Pattern(p) = &x.body {
-                    p
-                } else {
-                    unreachable!()
-                }
-            })
-            .flat_map(find_all_ids_in_pattern)
-            .collect(),
-        Pattern::Object(vec) => vec
-            .iter()
-            .flat_map(|object_inner| match object_inner {
-                ObjectInner::KV(_k, v) => {
-                    let v = if let SapASTBody::Pattern(p) = &v.body {
-                        p
-                    } else {
-                        unreachable!()
-                    };
-                    find_all_ids_in_pattern(v)
-                }
-                ObjectInner::Eclipse(EclipsePattern(id)) => vec![id.0.clone()],
-            })
-            .collect(),
-        Pattern::Literal(_) => vec![],
-        Pattern::Eclipse(EclipsePattern(id)) => vec![id.0.clone()],
-    }
-}
-
-pub fn compile(ast: Vec<SapAST>, lib: bool) -> String {
-    let append_file = append_file("src/backend/prelude");
-    let body = ast
-        .into_iter()
-        .map(compile_inner)
-        .collect::<Vec<String>>()
-        .join(";\n");
-    
-    format!(
-        "
-{append_file}
-
-async function __main__() {{
-    let main = (function*(){{
-        {body}
-    }});
-
-    let main_process = main();
-    try {{
-        let cont = undefined;
-        let ret = undefined;
-        while (1) {{
-            ret = main_process.next(cont)
-            if (ret.done) {{
-                break;
-            }}
-            cont = await ret.value;
-        }}
-    }} catch (e) {{
-        console.error(e);
-        return;
-    }}
-}}
-
-await __main__();
-__rl.close();
-
-"
-    )
-}
-
 fn compile_inner(ast: SapAST) -> String {
     match ast.body {
         crate::ast::SapASTBody::Id(id) => format!("__ENV__['{}']", id.0),
-        crate::ast::SapASTBody::Macro(id) => todo!(),
+        crate::ast::SapASTBody::Macro(_id) => todo!(),
         crate::ast::SapASTBody::LambdaExpr(LambdaExpr {
             patterns,
             implicit_params,
@@ -296,7 +47,12 @@ fn compile_inner(ast: SapAST) -> String {
                     .map(|(pattern, arg)| {
                         format!(
                             "((()=>{{{}; return true}})())",
-                            pattern_assign(pattern, arg.clone(), PatternAssignMode::Match)
+                            pattern_assign(
+                                pattern,
+                                arg.clone(),
+                                PatternAssignMode::Match,
+                                "__ENV__"
+                            )
                         )
                     })
                     .collect::<Vec<String>>()
@@ -342,7 +98,7 @@ fn compile_inner(ast: SapAST) -> String {
 
             format!(
                 "
-(function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __CENV__;
+(function*(__PENV__, {args}) {{const __ENV__ = {{ }}; __ENV__.__proto__ = __PENV__;
         {pattern}
         {body}
 }})
@@ -400,20 +156,28 @@ fn compile_inner(ast: SapAST) -> String {
         crate::ast::SapASTBody::Literal(literal) => compile_literal(literal),
         crate::ast::SapASTBody::Typeof(sap_ast) => format!("(typeof {})", compile_inner(*sap_ast)),
         crate::ast::SapASTBody::Yield(sap_ast) => format!("(yield {})", compile_inner(*sap_ast)),
-        crate::ast::SapASTBody::YieldChild(sap_ast) => format!(
-            "(yield* (function*(){{ const r = {0}; if (__is_return__(r)){{return (yield r.value)}} else {{return (yield* r)}} }})())",
-            compile_inner(*sap_ast)
-        ),
+        crate::ast::SapASTBody::YieldChild(sap_ast) => {
+            format!(
+                "(yield* __yield_child__(__ENV__, {}))",
+                compile_inner(*sap_ast)
+            )
+        }
 
         crate::ast::SapASTBody::Assign(pattern, sap_ast1) => pattern_assign(
             *pattern,
             compile_inner(*sap_ast1),
             PatternAssignMode::Assign,
+            "__ENV__",
         ),
         crate::ast::SapASTBody::MatchEquals(pattern, sap_ast1) => {
             format!(
                 "((()=>{{try{{{}; return true}}catch(e){{return false}}}})())",
-                pattern_assign(*pattern, compile_inner(*sap_ast1), PatternAssignMode::Match)
+                pattern_assign(
+                    *pattern,
+                    compile_inner(*sap_ast1),
+                    PatternAssignMode::Match,
+                    "__ENV__"
+                )
             )
         }
         crate::ast::SapASTBody::AssignGetCont(sap_ast, sap_ast1, sap_ast2) => {
@@ -422,6 +186,7 @@ fn compile_inner(ast: SapAST) -> String {
                     *sap_ast,
                     compile_inner(*sap_ast2),
                     PatternAssignMode::AssignGetCont(id.0),
+                    "__ENV__",
                 )
             } else {
                 unimplemented!("Expected id, got {:?}", sap_ast1)
@@ -584,31 +349,80 @@ fn compile_inner(ast: SapAST) -> String {
             compile_inner(*sap_ast1)
         ),
         crate::ast::SapASTBody::App(sap_ast, vec) => {
-            let f = compile_inner(*sap_ast);
-            let args = vec
-                .into_iter()
-                .map(compile_inner)
-                .collect::<Vec<String>>()
-                .join(",");
-            format!("__call__(__ENV__, {f}, {args})")
+            if let SapASTBody::Macro(id) = sap_ast.body {
+                // @import and @export
+
+                // in the future, we will have a macro system
+                // but not in stage 0
+
+                match id.0.as_str() {
+                    "@import" => {
+                        fn access_chain_to_list(
+                            mut state: Vec<String>,
+                            ast: SapASTBody,
+                        ) -> Vec<String> {
+                            match ast {
+                                SapASTBody::Access(ast, id) => {
+                                    state.push(id.0);
+                                    access_chain_to_list(state, ast.body)
+                                }
+                                SapASTBody::Id(id) => {
+                                    state.push(id.0);
+                                    state
+                                }
+                                _ => panic!("Expected id, got {:?}", ast),
+                            }
+                        }
+
+                        // the first argument must be Id
+                        let id = access_chain_to_list(vec![], vec[0].body.clone())
+                            .into_iter()
+                            .rev()
+                            .collect::<Vec<String>>();
+                        let cid = id.join("_");
+                        let id = id.join(".");
+                        if vec.len() == 1 {
+                            format!(
+                                "
+import {cid} from './{id}.js';
+for (let key in {cid}) {{
+    __ENV__[key] = {cid}[key];
+}};
+",
+                            )
+                        } else if vec.len() == 3 {
+                            let as_id = vec[2].clone().get_id().0;
+                            format!(
+                                "
+import {cid} from './{id}.js';
+__ENV__['{as_id}'] = {cid};
+"
+                            )
+                        } else {
+                            panic!("Expected 1 or 3 arguments, got {}", vec.len())
+                        }
+                    }
+                    "@export" => {
+                        let exports_object = vec[0].clone();
+                        let exports_object = compile_inner(exports_object);
+                        format!("export default {exports_object};")
+                    }
+                    _ => {
+                        panic!("Unknown macro {:?}", id.0)
+                    }
+                }
+            } else {
+                let f = compile_inner(*sap_ast);
+                let args = vec
+                    .into_iter()
+                    .map(compile_inner)
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("__call__(__ENV__, {f}, {args})")
+            }
         }
         crate::ast::SapASTBody::Error(sap_parser_error) => {
             panic!("Error: {:?}", sap_parser_error)
         }
     }
-}
-
-pub fn append_file(dir: &str) -> String {
-    const APPEND_FILE: &str = include_str!("prelude.js");
-
-    let dir = std::fs::read_dir(dir).unwrap();
-    let mut files = vec![];
-    for file in dir {
-        let file = file.unwrap();
-        let file_content = std::fs::read_to_string(file.path()).unwrap();
-        files.push(file_content);
-    }
-    let std = files.join("\n");
-
-    format!("{}\n{}", APPEND_FILE, std)
 }

@@ -16,7 +16,7 @@ start    = @{ XID_START | EMOJI_PRESENTATION }
 continue = @{ XID_CONTINUE | EMOJI_PRESENTATION }
 
 normal_id = @{ start ~ continue* | "_" ~ continue+ }
-macro_id = @{ "@" ~ normal_id }
+macro_id  = @{ "@" ~ normal_id }
 id        =  { normal_id | macro_id | magic_fn_id }
 
 prefix_typeof      = @{ "$" }
@@ -194,7 +194,7 @@ eclipse_pattern = ${ "..." ~ id }
 
 array_pattern_elem =  { pattern | eclipse_pattern }
 array_pattern_body = _{ array_pattern_elem ~ ("," ~ NEWLINE* ~ array_pattern_elem)* }
-array_pattern      =  { "^["  ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
+array_pattern      =  { "^[" ~ NEWLINE* ~ array_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]" }
 
 object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | id | eclipse_pattern }
 object_pattern_body = _{ object_pattern_elem ~ ("," ~ NEWLINE* ~ object_pattern_elem)* }
@@ -267,7 +267,7 @@ app   = { op_expr ~ param+ }
 // ----- quotations -----
 
 paren_expr = _{ "(" ~ expr ~ ")" }
-block      =  { "{" ~ NEWLINE* ~ expr ~ (next_stmt+ ~ expr)* ~ NEWLINE* ~ "}" }
+block      =  { "{" ~ NEWLINE* ~ expr ~ (next_stmt+ ~ expr)* ~ (next_stmt | NEWLINE)* ~ "}" | "{" ~ (next_stmt | NEWLINE)+ ~ "}" }
 
 // ----- chain -----
 
