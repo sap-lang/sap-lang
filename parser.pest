@@ -83,6 +83,10 @@ magic_fn_id = @{
 }
 
 // ========== Literals ==========
+// ----- regex -----
+regex          = _{ "/" ~ !"*"+ ~ regex_inner ~ "/" }
+regex_inner    = ${ (regex_fragment | escaped_string_fragment)* }
+regex_fragment = @{ (!("/" | "\\") ~ ANY)+ }
 
 // ----- string -----
 // https://en.wikipedia.org/wiki/Escape_sequences_in_C
@@ -156,13 +160,13 @@ boolean_false = @{ "false" }
 boolean = _{ boolean_true | boolean_false }
 
 // ----- array literal -----
-array_body    = _{ expr ~ ("," ~ NEWLINE* ~ expr)* }
+array_body    = _{ annotated_expr ~ ("," ~ NEWLINE* ~ annotated_expr)* }
 array_literal =  {
     "[" ~ NEWLINE* ~ array_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "]"
 }
 
 // ----- object literal -----
-object_elem_kv =  { expr ~ ":" ~ NEWLINE* ~ expr | id | literal }
+object_elem_kv =  { annotated_expr ~ ":" ~ NEWLINE* ~ annotated_expr | id | literal }
 object_body    = _{ object_elem_kv ~ ("," ~ NEWLINE* ~ object_elem_kv)* }
 object_literal =  {
     "{" ~ NEWLINE* ~ object_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}"
@@ -178,6 +182,7 @@ slot      = { "<>" }
 
 literal = {
     string
+  | regex
   | number
   | boolean
   | array_literal
@@ -255,9 +260,9 @@ postfix_op = _{
 // ----- function -----
 
 implicit_params      = { "?" ~ id+ }
-guard                = { ":" ~ expr }
-tr_lambda            = { "\\" ~ pattern* ~ implicit_params? ~ guard? ~ "->" ~ expr }
-no_param_lambda_expr = { "_{" ~ next_stmt* ~ expr ~ (next_stmt+ ~ expr)* ~ next_stmt* ~ "}" }
+guard                = { ":" ~ annotated_expr }
+tr_lambda            = { "\\" ~ pattern* ~ implicit_params? ~ guard? ~ "->" ~ annotated_expr }
+no_param_lambda_expr = { "_{" ~ next_stmt* ~ annotated_expr ~ (next_stmt+ ~ annotated_expr)* ~ next_stmt* ~ "}" }
 
 lambda_expr = { no_param_lambda_expr | tr_lambda }
 
@@ -266,13 +271,13 @@ app   = { op_expr ~ param+ }
 
 // ----- quotations -----
 
-paren_expr = _{ "(" ~ expr ~ ")" }
-block      =  { "{" ~ NEWLINE* ~ expr ~ (next_stmt+ ~ expr)* ~ (next_stmt | NEWLINE)* ~ "}" | "{" ~ (next_stmt | NEWLINE)+ ~ "}" }
+paren_expr = _{ "(" ~ annotated_expr ~ ")" }
+block      =  { "{" ~ NEWLINE* ~ annotated_expr ~ (next_stmt+ ~ annotated_expr)* ~ (next_stmt | NEWLINE)* ~ "}" | "{" ~ (next_stmt | NEWLINE)+ ~ "}" }
 
 // ----- chain -----
 
-index         =  { "[" ~ expr ~ "]" }
-slice         =  { "[" ~ #from = expr? ~ ":" ~ #to = expr? ~ (":" ~ #step = expr?)? ~ "]" }
+index         =  { "[" ~ annotated_expr ~ "]" }
+slice         =  { "[" ~ #from = annotated_expr? ~ ":" ~ #to = annotated_expr? ~ (":" ~ #step = annotated_expr?)? ~ "]" }
 access        =  { "." ~ id }
 chain_op      =  { slice | index | access }
 chain_operand = _{
@@ -287,7 +292,7 @@ chain_expr = _{ chain_operand ~ chain_op* }
 
 // ----- special op expr -----
 
-boolean_if = { chain_operand ~ "?" ~ NEWLINE* ~ expr ~ ":" ~ NEWLINE* ~ expr }
+boolean_if = { chain_operand ~ "?" ~ NEWLINE* ~ annotated_expr ~ ":" ~ NEWLINE* ~ annotated_expr }
 
 op_expr = {
     boolean_if
@@ -299,8 +304,11 @@ op_expr = {
 primary = { app | op_expr | pattern }
 expr    = { prefix_op* ~ primary ~ postfix_op* ~ (infix_op ~ NEWLINE* ~ prefix_op* ~ primary ~ postfix_op*)* }
 
+annotation_body = _{ macro_id ~ ("(" ~ primary ~ ")")? }
+annotation      =  { "@" ~ annotation_body }
+annotated_expr  =  { annotation* ~ expr }
 // ========== FINAL ==========
 
 file = {
-    SOI ~ next_stmt* ~ (expr ~ (next_stmt+ ~ expr)*)? ~ next_stmt* ~ EOI
+    SOI ~ next_stmt* ~ (annotated_expr ~ (next_stmt+ ~ annotated_expr)*)? ~ next_stmt* ~ EOI
 }
