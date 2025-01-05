@@ -19,7 +19,6 @@ normal_id = @{ start ~ continue* | "_" ~ continue+ }
 macro_id  = @{ "@" ~ normal_id }
 id        =  { normal_id | macro_id | magic_fn_id }
 
-prefix_typeof      = @{ "$" }
 prefix_not         = @{ "!" }
 prefix_neg         = @{ "-" }
 prefix_yield       = @{ "<-" }
@@ -78,6 +77,7 @@ magic_fn_id = @{
   | "(!)"
   | "(~)"
   | "([])"
+  | "([::])"
   | "(neg)"
   | "(bang)"
 }
@@ -215,8 +215,7 @@ pattern = {
 // ========== Operators ==========
 
 prefix_op = _{
-    prefix_typeof
-  | prefix_not
+  prefix_not
   | prefix_bit_not
   | prefix_neg
   | prefix_yield
