@@ -11,11 +11,9 @@ multiline_comment_inner = @{
 }
 
 // TODO: COMMENT to comment macro call
-COMMENT                 = _{ single_line_comment | multiline_comment }
+COMMENT = _{ single_line_comment | multiline_comment }
 
-
-
-next_stmt               = _{ ";" | NEWLINE+ }
+next_stmt = _{ ";" | NEWLINE+ }
 
 start    = @{ XID_START | EMOJI_PRESENTATION }
 continue = @{ XID_CONTINUE | EMOJI_PRESENTATION }
@@ -223,7 +221,7 @@ pattern = {
 // ========== Operators ==========
 
 prefix_op = _{
-  prefix_not
+    prefix_not
   | prefix_bit_not
   | prefix_neg
   | prefix_yield
@@ -273,9 +271,11 @@ no_param_lambda_expr = { "_{" ~ next_stmt* ~ annotated_expr ~ (next_stmt+ ~ anno
 
 lambda_expr = { no_param_lambda_expr | tr_lambda }
 
-param = { op_expr }
-app   = { op_expr ~ param+ }
-
+c_params_body = _{ annotated_expr ~ ("," ~ NEWLINE* ~ annotated_expr)* }
+c_app_params  =  {
+    "(" ~ NEWLINE* ~ c_params_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ ")"
+}
+c_app         = ${ op_expr ~ c_app_params }
 // ----- quotations -----
 
 paren_expr = _{ "(" ~ annotated_expr ~ ")" }
@@ -308,12 +308,16 @@ op_expr = {
 
 // ----- expr -----
 
-primary = { app | op_expr | pattern }
+primary = { c_app | op_expr | pattern }
 expr    = { prefix_op* ~ primary ~ postfix_op* ~ (infix_op ~ NEWLINE* ~ prefix_op* ~ primary ~ postfix_op*)* }
+
+param    =  { expr }
+app      =  { expr ~ param+ }
+app_expr = _{ app | expr }
 
 annotation_body = _{ macro_id ~ ("(" ~ primary ~ ")")? }
 annotation      =  { "@" ~ annotation_body }
-annotated_expr  =  { annotation* ~ expr }
+annotated_expr  =  { annotation* ~ app_expr }
 // ========== FINAL ==========
 
 file = {
