@@ -9,7 +9,12 @@ multiline_comment       = _{
 multiline_comment_inner = @{
     (!(PEEK ~ "/") ~ ANY)*
 }
+
+// TODO: COMMENT to comment macro call
 COMMENT                 = _{ single_line_comment | multiline_comment }
+
+
+
 next_stmt               = _{ ";" | NEWLINE+ }
 
 start    = @{ XID_START | EMOJI_PRESENTATION }
@@ -205,10 +210,13 @@ object_pattern_elem =  { (id | string) ~ ":" ~ NEWLINE* ~ pattern | id | eclipse
 object_pattern_body = _{ object_pattern_elem ~ ("," ~ NEWLINE* ~ object_pattern_elem)* }
 object_pattern      =  { "^{" ~ NEWLINE* ~ object_pattern_body? ~ NEWLINE* ~ ","? ~ NEWLINE* ~ "}" }
 
+macro_pattern = { macro_id ~ pattern }
+
 pattern = {
     array_pattern
   | object_pattern
   | literal
+  | macro_pattern
   | id
 }
 
