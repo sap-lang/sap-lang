@@ -1,1 +1,0 @@
-(format "{} loves {?}, because {1} is the dearest of {0}" "Alice" "Bob") |> puts

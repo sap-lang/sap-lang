@@ -1,2 +1,0 @@
-name = <<- gets "Enter your name: "
-puts ("Hello, " + name )
