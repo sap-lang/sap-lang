@@ -37,8 +37,8 @@ impl CommonMetaInfo {
 
 // sap0
 
-pub mod flatten_and_ops_to_apply;
-// pub mod pattern_to_ifs; // side effect
+pub mod flatten;
+pub mod trivialize_pattern;
 // pub mod to_anf;
 
 // pub mod topological_sort;
@@ -60,10 +60,6 @@ pub mod flatten_and_ops_to_apply;
 // pub mod compile_time_evaluatables_eval_with_sap0;
 // pub mod inherit_sap0;
 
-// // sap2
-// pub mod color_macros;
-// pub mod first_order_macro_expansion_eval_with_sap1;
-// pub mod inherit_sap1;
 
 // // sap3
 // pub mod secound_order_macro_expansion_eval_with_sap2;
@@ -93,6 +89,8 @@ macro_rules! def_pass_with_metainfo {
     ($name:ident {
         $($variant:ident($($arg:ident: $ty:ty),*)),* $(,)?
     }) => {
+        use $crate::passes::CommonMetaInfo;
+
         #[derive(Debug, Clone)]
         pub struct $name {
             pub inner: Inner,

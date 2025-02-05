@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 pub mod passes;
 
 pub mod simple_literal;

@@ -8,7 +8,6 @@ use sap_parser::{
 
 use crate::{def_pass_with_metainfo, simple_literal::SimpleLiteral, simple_pattern::SimplePattern};
 
-use super::CommonMetaInfo;
 
 use crate::error_reporting::{CompilePrompt, CompilePromptLabel, push_prompt};
 
