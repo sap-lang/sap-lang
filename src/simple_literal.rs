@@ -2,7 +2,7 @@ use sap_parser::literal::Literal;
 use sap_parser::literal::Inner as LiteralInner;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SimpleLiteral {
     Void,
     Bool(bool),

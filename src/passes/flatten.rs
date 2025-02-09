@@ -8,7 +8,6 @@ use sap_parser::{
 
 use crate::{def_pass_with_metainfo, simple_literal::SimpleLiteral, simple_pattern::SimplePattern};
 
-
 use crate::error_reporting::{CompilePrompt, CompilePromptLabel, push_prompt};
 
 #[derive(Debug, Clone)]
@@ -310,12 +309,13 @@ impl Flatten {
                             info,
                         );
                     }
+
+                    sap_parser::expr::infix::Infix::Pipe => {
+                        let e = expand_pipe(*expr, *expr1);
+                        return Flatten::from(e, filename, prompt_label);
+                    }
                     sap_parser::expr::infix::Infix::FindAndCallWithThis => {
-                        return Flatten::FindAndCallWithThis(
-                            Box::new(Flatten::from(*expr, filename, prompt_label)),
-                            Box::new(Flatten::from(*expr1, filename, prompt_label)),
-                            info,
-                        );
+                        todo!()
                     }
 
                     sap_parser::expr::infix::Infix::Add => "(+)".to_string(),
@@ -330,7 +330,6 @@ impl Flatten {
                     sap_parser::expr::infix::Infix::Lt => "(<)".to_string(),
                     sap_parser::expr::infix::Infix::Gt => "(>)".to_string(),
                     sap_parser::expr::infix::Infix::And => "(&&)".to_string(),
-                    sap_parser::expr::infix::Infix::Pipe => "(|>)".to_string(),
                     sap_parser::expr::infix::Infix::Or => "(||)".to_string(),
                     sap_parser::expr::infix::Infix::BitOr => "(|)".to_string(),
                     sap_parser::expr::infix::Infix::BitAnd => "(&)".to_string(),
@@ -417,6 +416,57 @@ impl Flatten {
     }
 }
 
+fn expand_pipe(expr: Expr, expr1: Expr) -> Expr {
+    let diag = expr.diag;
+    // a |> <X> |> <Y>
+    if let ExprInner::Infix(sap_parser::expr::infix::Infix::Pipe, x, y) = expr1.inner {
+        if let ExprInner::CApply(f, mut args) = x.inner {
+            args.push(expr);
+            let x = Expr {
+                inner: ExprInner::CApply(f, args),
+                diag: x.diag,
+            };
+            expand_pipe(x, *y)
+        } else if let ExprInner::MLApply(f, mut args) = x.inner {
+            args.push(expr);
+            let x = Expr {
+                inner: ExprInner::CApply(f, args),
+                diag: x.diag,
+            };
+            expand_pipe(x, *y)
+        } else {
+            let x = Expr {
+                inner: ExprInner::CApply(x, vec![expr]),
+                diag,
+            };
+            expand_pipe(x, *y)
+        }
+    }
+    // a |> f(...args)
+    else if let ExprInner::CApply(f, mut args) = expr1.inner {
+        args.push(expr);
+        Expr {
+            inner: ExprInner::CApply(f, args),
+            diag,
+        }
+    }
+    // a |> f ...args
+    else if let ExprInner::MLApply(f, mut args) = expr1.inner {
+        args.push(expr);
+        Expr {
+            inner: ExprInner::CApply(f, args),
+            diag,
+        }
+    }
+    // a |> f
+    else {
+        Expr {
+            inner: ExprInner::CApply(Box::new(expr1), vec![expr]),
+            diag,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::error_reporting::{CompilePrompt, init_reporter, push_prompt, report_error};
@@ -424,7 +474,7 @@ mod tests {
     #[test]
     fn test() {
         init_reporter();
-        let source = "a = \\ ^[1,...b, ...c, 2.3] -> b \\-> ()";
+        let source = "a |> b 1 |> c 2";
         let expr = sap_parser::parse_expr(source).unwrap();
         let filename = None;
         let prompt_label = &mut vec![];
