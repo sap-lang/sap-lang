@@ -34,12 +34,17 @@ pub enum CompilePromptCode {
     ExpectedPatternFindExpression,
     ExpectedLambdaExpr,
     ExpectedExpressionFindPattern,
-    UnexpectedMacroId,
+    ExpectedValidLHS,
+    Sap0DoesNotSupportMacro,
+    PatternShouldBeUsed,
+    SetShouldOnlyBeUsedForAccess,
     MoreThanOneEclipsePatternInPattern,
-
+    PatternAfterEclipsePattern,
+    
     // warnings
     Warning = 1000,
     FloatLiteralCouldNotBeUsedAsPattern,
+    DuplicateKeyInObject,
 
     // suggestions
     Suggestion = 2000,

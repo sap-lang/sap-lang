@@ -76,7 +76,6 @@ def_pass_with_metainfo! {
     TrivializePattern {
         LambdaExpr(lambda_expr: TrivializePatternLambdaExpr),
         IfThenElse(cond: Box<TrivializePattern>, true_expr: Vec<TrivializePattern>, false_expr: Vec<TrivializePattern>),
-        FlattenIfThenElse(cond: Box<TrivializePattern>, true_expr: Vec<TrivializePattern>, false_expr: Vec<TrivializePattern>),
 
         RuntimeError(error: RuntimeErrors),
 
@@ -89,22 +88,19 @@ def_pass_with_metainfo! {
         Id(id: String),
         Yield(yielding: Box<TrivializePattern>),
         Access(id: String, expr: Box<TrivializePattern>),
-        // partially expanded to object
         Extend(base: Box<TrivializePattern>, parent: Box<TrivializePattern>),
         FindAndCallWithThis(calling: Box<TrivializePattern>, id: Box<TrivializePattern>),
         Apply(call: Box<TrivializePattern>, args: Vec<TrivializePattern>),
 
-        MatchEquals(matching: Box<TrivializePattern>, eq: Box<TrivializePattern>),
-
         Assign(left: String, right: Box<TrivializePattern>),
-        
+
         // a = 1
         Set(left: String, right: Box<TrivializePattern>),
         // a[0] := 1
         SetUpdate(left: Box<TrivializePattern>, right: Box<TrivializePattern>),
         // a.a := 1
         SetInner(left: Box<TrivializePattern>, right: Box<TrivializePattern>),
-        
+
         // a ::= \a -> a
         AssignSlot(leftslot: String, right: Box<TrivializePattern>),
         // only access
@@ -133,12 +129,28 @@ impl TrivializePattern {
                 prevs.push(t);
             }
             FlattenInner::IfThenElse(flatten, flatten1, flatten2) => {
-                let mut t = TrivializePattern::from_flatten(*flatten, prompt_label);
-                let tt = t.pop().unwrap();
-                prevs.extend(t);
-                let te = TrivializePattern::from_flatten(*flatten1, prompt_label);
-                let fe = TrivializePattern::from_flatten(*flatten2, prompt_label);
-                TrivializePattern::IfThenElse(Box::new(tt), te, fe, info);
+                if let FlattenInner::MatchEquals(x, y) = flatten.inner {
+                    flatten_pattern_if(
+                        *x,
+                        *y,
+                        TrivializePattern::from_flatten(*flatten1, prompt_label)
+                            .pop()
+                            .unwrap(),
+                        TrivializePattern::from_flatten(*flatten2, prompt_label)
+                            .pop()
+                            .unwrap(),
+                        info,
+                        prompt_label,
+                        &mut prevs,
+                    );
+                } else {
+                    let mut t = TrivializePattern::from_flatten(*flatten, prompt_label);
+                    let tt = t.pop().unwrap();
+                    prevs.extend(t);
+                    let te = TrivializePattern::from_flatten(*flatten1, prompt_label);
+                    let fe = TrivializePattern::from_flatten(*flatten2, prompt_label);
+                    TrivializePattern::IfThenElse(Box::new(tt), te, fe, info);
+                }
             }
             FlattenInner::Array(flattens) => {
                 let mut elems = vec![];
@@ -147,11 +159,7 @@ impl TrivializePattern {
                     let tt = t.pop().unwrap();
                     prevs.extend(t);
                     let id = uuid();
-                    let tt = TrivializePattern::Assign(
-                        id.clone(),
-                        Box::new(tt),
-                        info,
-                    );
+                    let tt = TrivializePattern::Assign(id.clone(), Box::new(tt), info);
                     prevs.push(tt);
                     elems.push(id);
                 }
@@ -165,11 +173,7 @@ impl TrivializePattern {
                     let tt = t.pop().unwrap();
                     prevs.extend(t);
                     let id = uuid();
-                    let tt = TrivializePattern::Assign(
-                        id.clone(),
-                        Box::new(tt),
-                        info,
-                    );
+                    let tt = TrivializePattern::Assign(id.clone(), Box::new(tt), info);
                     prevs.push(tt);
                     elems.push((key, id));
                 }
@@ -254,23 +258,15 @@ impl TrivializePattern {
             }
 
             FlattenInner::MatchEquals(flatten, flatten1) => {
-                if let FlattenInner::Pattern(p) = flatten.inner {
-                    let mut t = Self::from_flatten(*flatten1, prompt_label);
-                    let tt = t.pop().unwrap();
-
-                    let pt = pattern_to_ifs(p, tt, RuntimeErrors::DestructorPatternMatchFailed);
-                    let pt = assert_to_flatten_if(pt, info);
-                    prevs.extend(pt);
-                } else {
-                    prompt_label.push(CompilePromptLabel::new(
-                        CompilePromptCode::ExpectedPatternFindExpression,
-                        info,
-                    ));
-                    prevs.push(TrivializePattern::RuntimeError(
-                        RuntimeErrors::CustomError("unsupport".to_string()),
-                        info,
-                    ));
-                }
+                flatten_pattern_if(
+                    *flatten,
+                    *flatten1,
+                    TrivializePattern::Literal(SimpleLiteral::Bool(true), info),
+                    TrivializePattern::Literal(SimpleLiteral::Bool(false), info),
+                    info,
+                    prompt_label,
+                    &mut prevs,
+                );
             }
 
             FlattenInner::Assign(flatten, flatten1) => {
@@ -280,52 +276,16 @@ impl TrivializePattern {
                     FlattenInner::Pattern(p) => {
                         let mut t = Self::from_flatten(*flatten1, prompt_label);
                         let tt = t.pop().unwrap();
-    
+
                         let pt = pattern_to_ifs(p, tt, RuntimeErrors::DestructorPatternMatchFailed);
                         prevs.extend(pt);
-                    },
+                    }
                     FlattenInner::Id(id) => {
                         let mut t = Self::from_flatten(*flatten1, prompt_label);
                         let tt = t.pop().unwrap();
                         prevs.extend(t);
                         let t = TrivializePattern::Assign(id, Box::new(tt), info);
                         prevs.push(t);
-                    },
-                    _ => {
-                        prompt_label.push(CompilePromptLabel::new(
-                            CompilePromptCode::ExpectedValidLHS,
-                            info,
-                        ));
-                        prevs.push(TrivializePattern::RuntimeError(
-                            RuntimeErrors::CustomError("unsupport".to_string()),
-                            info,
-                        ));
-                    }
-                }
-            },
-            FlattenInner::Set(flatten, flatten1) => {
-                match flatten.inner {
-                    FlattenInner::Access(x, y) => todo!(),
-                    FlattenInner::Apply(id, y) => {
-                        if let FlattenInner::Id(str) = id.inner && str == "([])" {
-                            todo!()
-                        } else {
-                            prompt_label.push(CompilePromptLabel::new(
-                                CompilePromptCode::SetShouldOnlyBeUsedForAccess,
-                                info,
-                            ));
-                            prevs.push(TrivializePattern::RuntimeError(
-                                RuntimeErrors::CustomError("unsupport".to_string()),
-                                info,
-                            ));
-                        }
-                    },
-                    FlattenInner::Id(id) => {
-                        let mut t = Self::from_flatten(*flatten1, prompt_label);
-                        let tt = t.pop().unwrap();
-                        prevs.extend(t);
-                        let t = TrivializePattern::Set(id, Box::new(tt), info);
-                        prevs.push(t);
                     }
                     _ => {
                         prompt_label.push(CompilePromptLabel::new(
@@ -338,20 +298,17 @@ impl TrivializePattern {
                         ));
                     }
                 }
-            },
-            FlattenInner::AssignSlot(flatten, flatten1) => {
-                match flatten.inner {
-                    FlattenInner::Id(id) => {
-                        let mut t = Self::from_flatten(*flatten1, prompt_label);
-                        let tt = t.pop().unwrap();
-                        prevs.extend(t);
-                        let t = TrivializePattern::AssignSlot(id, Box::new(tt), info);
-                        prevs.push(t);
-                    },
-                    FlattenInner::Access(x, y) => todo!(),
-                    _ => {
+            }
+            FlattenInner::Set(flatten, flatten1) => match flatten.inner {
+                FlattenInner::Access(x, y) => todo!(),
+                FlattenInner::Apply(id, y) => {
+                    if let FlattenInner::Id(str) = id.inner
+                        && str == "([])"
+                    {
+                        todo!()
+                    } else {
                         prompt_label.push(CompilePromptLabel::new(
-                            CompilePromptCode::ExpectedValidLHS,
+                            CompilePromptCode::SetShouldOnlyBeUsedForAccess,
                             info,
                         ));
                         prevs.push(TrivializePattern::RuntimeError(
@@ -359,6 +316,43 @@ impl TrivializePattern {
                             info,
                         ));
                     }
+                }
+                FlattenInner::Id(id) => {
+                    let mut t = Self::from_flatten(*flatten1, prompt_label);
+                    let tt = t.pop().unwrap();
+                    prevs.extend(t);
+                    let t = TrivializePattern::Set(id, Box::new(tt), info);
+                    prevs.push(t);
+                }
+                _ => {
+                    prompt_label.push(CompilePromptLabel::new(
+                        CompilePromptCode::ExpectedValidLHS,
+                        info,
+                    ));
+                    prevs.push(TrivializePattern::RuntimeError(
+                        RuntimeErrors::CustomError("unsupport".to_string()),
+                        info,
+                    ));
+                }
+            },
+            FlattenInner::AssignSlot(flatten, flatten1) => match flatten.inner {
+                FlattenInner::Id(id) => {
+                    let mut t = Self::from_flatten(*flatten1, prompt_label);
+                    let tt = t.pop().unwrap();
+                    prevs.extend(t);
+                    let t = TrivializePattern::AssignSlot(id, Box::new(tt), info);
+                    prevs.push(t);
+                }
+                FlattenInner::Access(x, y) => todo!(),
+                _ => {
+                    prompt_label.push(CompilePromptLabel::new(
+                        CompilePromptCode::ExpectedValidLHS,
+                        info,
+                    ));
+                    prevs.push(TrivializePattern::RuntimeError(
+                        RuntimeErrors::CustomError("unsupport".to_string()),
+                        info,
+                    ));
                 }
             },
         }
@@ -366,22 +360,50 @@ impl TrivializePattern {
     }
 }
 
-fn assert_to_flatten_if(mut p: Vec<TrivializePattern>, info: CommonMetaInfo) -> Vec<TrivializePattern> {
+fn flatten_pattern_if(
+    flatten: Flatten,
+    flatten1: Flatten,
+    true_expr: TrivializePattern,
+    false_expr: TrivializePattern,
+    info: CommonMetaInfo,
+    prompt_label: &mut Vec<CompilePromptLabel>,
+    prevs: &mut Vec<TrivializePattern>,
+) {
+    if let FlattenInner::Pattern(p) = flatten.inner {
+        let mut t = TrivializePattern::from_flatten(flatten1, prompt_label);
+        let tt = t.pop().unwrap();
+
+        let pt = pattern_to_ifs(p, tt, RuntimeErrors::DestructorPatternMatchFailed);
+        let pt = assert_to_flatten_if(pt, true_expr, false_expr, info);
+        prevs.extend(pt);
+    } else {
+        prompt_label.push(CompilePromptLabel::new(
+            CompilePromptCode::ExpectedPatternFindExpression,
+            info,
+        ));
+        prevs.push(TrivializePattern::RuntimeError(
+            RuntimeErrors::CustomError("unsupport".to_string()),
+            info,
+        ));
+    }
+}
+
+fn assert_to_flatten_if(
+    mut p: Vec<TrivializePattern>,
+    true_expr: TrivializePattern,
+    false_expr: TrivializePattern,
+    info: CommonMetaInfo,
+) -> Vec<TrivializePattern> {
     let mut prevs = vec![];
     for i in 0..p.len() {
         let pp = &p[i];
         if let Inner::Assert(cond, _) = pp.inner.clone() {
-            p.push(TrivializePattern::Literal(SimpleLiteral::Bool(true), info));
+            p.push(true_expr.clone());
             let mut pp = prevs;
             prevs = vec![];
             pp.extend(p[i + 1..].to_vec());
-            let t = TrivializePattern::FlattenIfThenElse(
-                cond.clone(),
-    
-                pp,
-                vec![TrivializePattern::Literal(SimpleLiteral::Bool(false), info)],
-                info,
-            );
+            let pp = assert_to_flatten_if(pp, true_expr.clone(), false_expr.clone(), info);
+            let t = TrivializePattern::IfThenElse(cond.clone(), pp, vec![false_expr.clone()], info);
             prevs.push(t);
         } else {
             prevs.push(p[i].clone());
@@ -398,20 +420,13 @@ fn pattern_to_ifs(
     let info = e.info;
     match p {
         Pattern::Id(id) => {
-            let expr = TrivializePattern::Assign(
-                id,
-                Box::new(e),
-                info,
-            );
+            let expr = TrivializePattern::Assign(id, Box::new(e), info);
             vec![expr]
         }
         Pattern::Literal(literal) => {
             let expr = TrivializePattern::Apply(
                 Box::new(TrivializePattern::Id("(==)".to_string(), info)),
-                vec![
-                    e,
-                    TrivializePattern::Literal(literal, info),
-                ],
+                vec![e, TrivializePattern::Literal(literal, info)],
                 info,
             );
             let expr = assert(Box::new(expr), error.clone());
@@ -432,6 +447,19 @@ fn pattern_to_ifs(
                 patterns.extend(pattern_to_ifs(elem, e, error.clone()));
                 i += 1;
             }
+            patterns.push(assert(
+                Box::new(TrivializePattern::Apply(
+                    Box::new(TrivializePattern::Id("(>=)".to_string(), info)),
+                    vec![
+                        TrivializePattern::Apply(Box::new(TrivializePattern::Id("(len)".to_string(), info)), vec![
+                            e.clone()
+                        ], info),
+                        TrivializePattern::Literal(SimpleLiteral::Int(i as _), info),
+                    ],
+                    info,
+                )),
+                error.clone(),
+            ));
 
             if let Some(id) = eclispe {
                 let expr = TrivializePattern::Apply(
@@ -444,11 +472,7 @@ fn pattern_to_ifs(
                     ],
                     info,
                 );
-                let expr = TrivializePattern::Assign(
-                    id.clone(),
-                    Box::new(expr),
-                    info,
-                );
+                let expr = TrivializePattern::Assign(id.clone(), Box::new(expr), info);
                 patterns.push(expr);
             }
             patterns
@@ -460,19 +484,13 @@ fn pattern_to_ifs(
                 patterns.extend(pattern_to_ifs(elem, e, error.clone()));
             }
             if let Some(id) = eclipse {
-                let expr = TrivializePattern::Assign(
-                    id.clone(),
-                    Box::new(e),
-                    info,
-                );
+                let expr = TrivializePattern::Assign(id.clone(), Box::new(e), info);
                 patterns.push(expr);
             }
             patterns
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -483,15 +501,16 @@ mod tests {
         init_reporter();
         let source = "
 {
-        1
-        ^[b, 1] ?= 3
+    ()
+        ^[b, 2.5, ...a] ?= c ? 1 : 2
 }
-".trim();
+"
+        .trim();
         let expr = sap_parser::parse_expr(source).unwrap();
         let filename = None;
         let prompt_label = &mut vec![];
         let ops_to_apply = super::Flatten::from(expr, filename, prompt_label);
-        // println!("{:#?}\n\n", ops_to_apply);
+        println!("{:#?}\n\n", ops_to_apply);
         let tri = super::TrivializePattern::from_flatten(ops_to_apply, prompt_label);
         println!("{:#?}\n\n", tri);
         report_error(|x| {

@@ -39,21 +39,9 @@ impl CommonMetaInfo {
 
 pub mod flatten;
 pub mod trivialize_pattern;
-// pub mod to_anf;
-
-// pub mod topological_sort;
-// pub mod build_env;
-
-// pub mod color_slots;
-// pub mod color_function_implicit_params;
-// pub mod decolor_calling_function_implicit_params_with_auto_params_from_env;
-// pub mod to_decl_and_set;
-// pub mod flatten_anf_with_mangling_decls;
-// pub mod color_cofunctions;
-// pub mod cofunction_to_state_machine;
+pub mod add_env_and_cps;
 // pub mod sap0_to_js;
 
-// pub mod create_function_replica_on_call;
 
 // // sap1
 // pub mod color_compile_time_evaluatables;
@@ -62,12 +50,11 @@ pub mod trivialize_pattern;
 
 
 // // sap3
-// pub mod secound_order_macro_expansion_eval_with_sap2;
+// pub mod macro_expansion;
 // pub mod inherit_sap2;
 
 // // saps
 // pub mod type_inference;
-// pub mod escape_analysis;
 // pub mod inherit_sap3;
 
 // // sap
@@ -76,8 +63,7 @@ pub mod trivialize_pattern;
 // pub mod once_function_inlining;
 // pub mod callback_function_inlining;
 // pub mod slot_calls_to_object;
-// pub mod sap_to_tinygo;
-// // pub mod sap_to_mlir;
+// pub mod sap_to_go;
 
 pub fn uuid() -> String {
     let uuid = uuid::Uuid::now_v7();

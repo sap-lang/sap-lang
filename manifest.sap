@@ -1,0 +1,52 @@
+@package "sap-compiler" {
+    version: "0.1.0",
+    sap_version: "0.1.0",
+    license: "MIT",
+    authors: ["Your Name <your email>"],
+    readme: "README.md",
+    description: "A compiler for the sap programming language",
+    keywords: ["compiler", "sap", "programming language"],
+    categories: ["development-tools", "programming-languages"],
+    repository: "https://git.com/yourname/yourrepo.git",
+    homepage: "https://yourname.github.io/yourrepo",
+    // if publish to sap's registry, will automatically generate documentation, otherwise, you need to specify the documentation url.
+    documentation: "https://yourname.github.io/yourrepo/docs",
+}
+
+// default behavior
+// change it will affect the dependencies resolution
+@package_registry "https://registry.sap-lang.org"
+
+@features [
+    "feature1",
+    "feature2",
+]
+
+@dependencies [
+    nanohttp >= "0.1.0",
+    effect_io >= "0.1.0",
+    @with_feature "feature1" { name: "sap-parser", path: "../sap-parser" },
+    { name: "sap-compiler", version: "0.1.0" },
+]
+
+@dev_dependencies [
+    whatever >= "0.1.0",
+]
+
+@build_dependencies [
+    whatever >= "0.1.0",
+]
+
+@patch_dependencies [
+    { name: "sap-parser", path: "../sap-parser" },
+    { name: "sap-parser", replace_with: "whatever" ,path: "../sap-parser" },
+]
+
+@binaries [
+    { name: "sapc", path: "src/main.sap" },
+    { name: "sapc", path: "src/main.sap", build_script: "./build.sap" },
+    { name: "sapc", path: "src/main.sap" },
+]
+
+// this is default behavior
+@global_build_script "./build.sap"
